@@ -1,0 +1,4832 @@
+components:
+  schemas:
+    APIKey:
+      additionalProperties: false
+      properties:
+        created_at:
+          format: date-time
+          type: string
+        id:
+          format: int64
+          type: integer
+        last_used_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        name:
+          type: string
+        prefix:
+          type: string
+        revoked_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        scope:
+          enum:
+            - mcp
+            - monitor
+            - ingest
+          type: string
+      required:
+        - id
+        - name
+        - prefix
+        - scope
+        - created_at
+        - last_used_at
+        - revoked_at
+      type: object
+    Account:
+      additionalProperties: false
+      properties:
+        timezone:
+          description: IANA time zone of the user's local days (Settings, else RITM_TZ)
+          examples:
+            - Europe/Kyiv
+          type: string
+        today:
+          description: Today in that zone
+          format: date
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        version:
+          description: Ritm build version
+          type: string
+      required:
+        - user
+        - version
+        - timezone
+        - today
+      type: object
+    Annotation:
+      additionalProperties: false
+      properties:
+        notes:
+          maxLength: 4000
+          type: string
+        rpe:
+          description: Rating of perceived exertion; null clears it
+          format: int64
+          maximum: 10
+          minimum: 1
+          type:
+            - integer
+            - "null"
+      required:
+        - rpe
+        - notes
+      type: object
+    AuthConfig:
+      additionalProperties: false
+      properties:
+        registration_enabled:
+          description: Visitors may create accounts (RITM_REGISTRATION_ENABLED)
+          type: boolean
+      required:
+        - registration_enabled
+      type: object
+    Catalog:
+      additionalProperties: false
+      properties:
+        prompts:
+          items:
+            $ref: "#/components/schemas/CatalogEntry"
+          type: array
+        resources:
+          items:
+            $ref: "#/components/schemas/CatalogEntry"
+          type: array
+        tools:
+          items:
+            $ref: "#/components/schemas/CatalogTool"
+          type: array
+      required:
+        - tools
+        - resources
+        - prompts
+      type: object
+    CatalogEntry:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+      required:
+        - name
+        - description
+      type: object
+    CatalogParam:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        required:
+          type: boolean
+      required:
+        - name
+        - description
+        - required
+      type: object
+    CatalogTool:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        params:
+          items:
+            $ref: "#/components/schemas/CatalogParam"
+          type: array
+        title:
+          type: string
+      required:
+        - name
+        - title
+        - description
+        - params
+      type: object
+    Coverage:
+      additionalProperties: false
+      properties:
+        db_bytes:
+          format: int64
+          type: integer
+        row_counts:
+          additionalProperties:
+            format: int64
+            type: integer
+          type: object
+        sources:
+          items:
+            $ref: "#/components/schemas/SourceInfo"
+          type: array
+        types:
+          items:
+            $ref: "#/components/schemas/TypeCoverage"
+          type: array
+        wal_bytes:
+          format: int64
+          type: integer
+      required:
+        - types
+        - sources
+        - db_bytes
+        - wal_bytes
+        - row_counts
+      type: object
+    CreatedAPIKey:
+      additionalProperties: false
+      properties:
+        key:
+          $ref: "#/components/schemas/APIKey"
+        secret:
+          description: "Send as Authorization: Bearer <secret>. Not retrievable later."
+          examples:
+            - ritm_3x…
+          type: string
+      required:
+        - key
+        - secret
+      type: object
+    Credentials:
+      additionalProperties: false
+      properties:
+        password:
+          maxLength: 72
+          minLength: 1
+          type: string
+        timezone:
+          description: The browser's IANA time zone; becomes the user's time zone when none is set yet
+          examples:
+            - Europe/Berlin
+          maxLength: 64
+          type: string
+        username:
+          examples:
+            - alice
+          maxLength: 64
+          minLength: 1
+          type: string
+      required:
+        - username
+        - password
+      type: object
+    DailyActivity:
+      additionalProperties: false
+      properties:
+        active_hours:
+          format: int64
+          type:
+            - integer
+            - "null"
+        active_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        basal_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        distance_m:
+          format: double
+          type:
+            - number
+            - "null"
+        exercise_min:
+          format: double
+          type:
+            - number
+            - "null"
+        flights:
+          format: double
+          type:
+            - number
+            - "null"
+        has_watch_data:
+          type: boolean
+        is_gym_day:
+          type: boolean
+        longest_sedentary_h:
+          format: double
+          type:
+            - number
+            - "null"
+        rings:
+          $ref: "#/components/schemas/Rings"
+        stand_hours:
+          format: int64
+          type:
+            - integer
+            - "null"
+        stand_min:
+          format: double
+          type:
+            - number
+            - "null"
+        steps:
+          format: double
+          type:
+            - number
+            - "null"
+        steps_by_hour:
+          items:
+            format: double
+            type: number
+          type: array
+        summary_mismatch:
+          type: boolean
+        total_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - day
+        - steps
+        - distance_m
+        - active_kcal
+        - basal_kcal
+        - total_kcal
+        - flights
+        - exercise_min
+        - stand_min
+        - stand_hours
+        - active_hours
+        - longest_sedentary_h
+        - is_gym_day
+        - summary_mismatch
+        - has_watch_data
+        - rings
+      type: object
+    DailyHeart:
+      additionalProperties: false
+      properties:
+        day:
+          type: string
+        heart_events:
+          format: int64
+          type: integer
+        hr_avg_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        hr_max_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        hr_min_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        hr_sleep_avg_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        hrv_sdnn_ms:
+          format: double
+          type:
+            - number
+            - "null"
+        resp_rate_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        resting_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        spo2_avg_pct:
+          format: double
+          type:
+            - number
+            - "null"
+        spo2_min_pct:
+          format: double
+          type:
+            - number
+            - "null"
+        vo2max_ml_kg_min:
+          format: double
+          type:
+            - number
+            - "null"
+        walking_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        wrist_temp_dev_c:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - day
+        - hr_min_bpm
+        - hr_avg_bpm
+        - hr_max_bpm
+        - hr_sleep_avg_bpm
+        - resting_hr_bpm
+        - walking_hr_bpm
+        - hrv_sdnn_ms
+        - vo2max_ml_kg_min
+        - spo2_avg_pct
+        - spo2_min_pct
+        - resp_rate_bpm
+        - wrist_temp_dev_c
+        - heart_events
+      type: object
+    DayDetail:
+      additionalProperties: false
+      properties:
+        activity:
+          $ref: "#/components/schemas/DailyActivity"
+        day:
+          type: string
+        end_ms:
+          format: int64
+          type: integer
+        heart:
+          $ref: "#/components/schemas/DailyHeart"
+        hr:
+          items:
+            $ref: "#/components/schemas/HRPoint"
+          type: array
+        sleep:
+          $ref: "#/components/schemas/SleepNight"
+        sleep_segments:
+          items:
+            $ref: "#/components/schemas/SleepSegment"
+          type: array
+        start_ms:
+          format: int64
+          type: integer
+        stood_hours:
+          items:
+            format: int64
+            type: integer
+          type: array
+        workouts:
+          items:
+            $ref: "#/components/schemas/WorkoutSummary"
+          type: array
+      required:
+        - day
+        - start_ms
+        - end_ms
+        - activity
+        - heart
+        - sleep
+        - stood_hours
+        - hr
+        - workouts
+        - sleep_segments
+      type: object
+    ErrorDetail:
+      additionalProperties: false
+      properties:
+        location:
+          description: Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
+          type: string
+        message:
+          description: Error message text
+          type: string
+        value:
+          description: The value at the given location
+      type: object
+    ErrorModel:
+      additionalProperties: false
+      properties:
+        detail:
+          description: A human-readable explanation specific to this occurrence of the problem.
+          examples:
+            - Property foo is required but is missing.
+          type: string
+        errors:
+          description: Optional list of individual error details
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+          type: array
+        instance:
+          description: A URI reference that identifies the specific occurrence of the problem.
+          examples:
+            - https://example.com/error-log/abc123
+          format: uri
+          type: string
+        status:
+          description: HTTP status code
+          examples:
+            - 400
+          format: int64
+          type: integer
+        title:
+          description: A short, human-readable summary of the problem type. This value should not change between occurrences of the error.
+          examples:
+            - Bad Request
+          type: string
+        type:
+          default: about:blank
+          description: A URI reference to human-readable documentation for the error.
+          examples:
+            - https://example.com/errors/example
+          format: uri
+          type: string
+      type: object
+    Freshness:
+      additionalProperties: false
+      properties:
+        age_days:
+          format: double
+          type:
+            - number
+            - "null"
+        last_checked_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        last_data_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        last_import_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        stale:
+          type: boolean
+        stale_after_hours:
+          format: double
+          type: number
+      required:
+        - last_data_at
+        - last_import_at
+        - last_checked_at
+        - age_days
+        - stale
+        - stale_after_hours
+      type: object
+    FreshnessReport:
+      additionalProperties: false
+      properties:
+        age_days:
+          format: double
+          type:
+            - number
+            - "null"
+        checked_at:
+          type: string
+        last_data_at:
+          type:
+            - string
+            - "null"
+        last_import_at:
+          type:
+            - string
+            - "null"
+        message:
+          type: string
+        stale_after_days:
+          format: double
+          type: number
+        status:
+          enum:
+            - ok
+            - stale
+            - no_data
+            - error
+          type: string
+      required:
+        - status
+        - message
+        - last_data_at
+        - age_days
+        - stale_after_days
+        - last_import_at
+        - checked_at
+      type: object
+    FreshnessSummary:
+      additionalProperties: false
+      properties:
+        age_days:
+          format: double
+          type:
+            - number
+            - "null"
+        has_sleep_data:
+          description: Any night of sleep is stored (the Sleep page is shown)
+          type: boolean
+        last_checked_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        last_data_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        last_import_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        stale:
+          type: boolean
+        stale_after_hours:
+          format: double
+          type: number
+      required:
+        - has_sleep_data
+        - last_data_at
+        - last_import_at
+        - last_checked_at
+        - age_days
+        - stale
+        - stale_after_hours
+      type: object
+    Goals:
+      additionalProperties: false
+      properties:
+        exercise_min:
+          format: double
+          type: number
+        sessions_per_week:
+          format: int64
+          type: integer
+        stand_hours:
+          format: double
+          type: number
+        steps_per_day:
+          format: double
+          type: number
+        use_ring_goals:
+          type: boolean
+      required:
+        - steps_per_day
+        - sessions_per_week
+        - stand_hours
+        - exercise_min
+        - use_ring_goals
+      type: object
+    HRPoint:
+      additionalProperties: false
+      properties:
+        avg_bpm:
+          format: double
+          type: number
+        max_bpm:
+          format: double
+          type: number
+        min_bpm:
+          format: double
+          type: number
+        t_ms:
+          format: int64
+          type: integer
+      required:
+        - t_ms
+        - avg_bpm
+        - min_bpm
+        - max_bpm
+      type: object
+    Health:
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+            - ok
+            - error
+          type: string
+        version:
+          type: string
+      required:
+        - status
+        - version
+      type: object
+    HeartEvent:
+      additionalProperties: false
+      properties:
+        end_ms:
+          format: int64
+          type: integer
+        metadata:
+          additionalProperties:
+            type: string
+          type: object
+        source:
+          type: string
+        start_ms:
+          format: int64
+          type: integer
+        type:
+          enum:
+            - high
+            - low
+            - irregular
+          type: string
+      required:
+        - type
+        - start_ms
+        - end_ms
+        - source
+      type: object
+    Import:
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+        exported_at:
+          description: ExportDate of the Apple Health export
+          format: date-time
+          type:
+            - string
+            - "null"
+        file_name:
+          type: string
+        file_size:
+          format: int64
+          type: integer
+        finished_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        full_reimport:
+          type: boolean
+        id:
+          type: string
+        progress:
+          $ref: "#/components/schemas/Progress"
+          description: Live progress; present while the import is queued or running
+        started_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        stats:
+          $ref: "#/components/schemas/ImportStats"
+        status:
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+          type: string
+      required:
+        - id
+        - status
+        - file_name
+        - file_size
+        - exported_at
+        - full_reimport
+        - started_at
+        - finished_at
+      type: object
+    ImportRow:
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+        exported_at:
+          description: ExportDate of the Apple Health export
+          format: date-time
+          type:
+            - string
+            - "null"
+        file_name:
+          type: string
+        file_size:
+          format: int64
+          type: integer
+        finished_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        full_reimport:
+          type: boolean
+        id:
+          type: string
+        started_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        stats:
+          $ref: "#/components/schemas/ImportStats"
+        status:
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+          type: string
+      required:
+        - id
+        - status
+        - file_name
+        - file_size
+        - exported_at
+        - full_reimport
+        - started_at
+        - finished_at
+      type: object
+    ImportStats:
+      additionalProperties: false
+      properties:
+        days_reaggregated:
+          format: int64
+          type: integer
+        duration_ms:
+          format: int64
+          type: integer
+        earliest_affected_day:
+          type: string
+        errors:
+          items:
+            type: string
+          type: array
+        export_date_ms:
+          format: int64
+          type: integer
+        full_reimport:
+          type: boolean
+        ignored_records:
+          format: int64
+          type: integer
+        last_data_ms:
+          format: int64
+          type: integer
+        new_workouts:
+          format: int64
+          type: integer
+        older_export:
+          type: boolean
+        routes_stored:
+          format: int64
+          type: integer
+        summaries_changed:
+          format: int64
+          type: integer
+        types:
+          additionalProperties:
+            $ref: "#/components/schemas/TypeStats"
+          type: object
+        warnings:
+          items:
+            type: string
+          type: array
+        workouts:
+          $ref: "#/components/schemas/TypeStats"
+        xml_bytes:
+          format: int64
+          type: integer
+      required:
+        - xml_bytes
+        - duration_ms
+        - types
+        - workouts
+        - summaries_changed
+        - days_reaggregated
+        - new_workouts
+        - ignored_records
+        - older_export
+        - full_reimport
+      type: object
+    Insight:
+      additionalProperties: false
+      properties:
+        baseline_value:
+          format: double
+          type:
+            - number
+            - "null"
+        body:
+          type: string
+        category:
+          enum:
+            - activity
+            - heart
+            - training
+            - recovery
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        current_value:
+          format: double
+          type:
+            - number
+            - "null"
+        delta_pct:
+          format: double
+          type:
+            - number
+            - "null"
+        evidence:
+          additionalProperties: {}
+          type: object
+        id:
+          format: int64
+          type: integer
+        metric:
+          type: string
+        period_end:
+          type: string
+        period_kind:
+          enum:
+            - daily
+            - weekly
+            - monthly
+            - long_term
+          type: string
+        period_start:
+          type: string
+        polarity:
+          enum:
+            - positive
+            - neutral
+            - attention
+          type: string
+        rule_id:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - rule_id
+        - category
+        - polarity
+        - period_kind
+        - period_start
+        - period_end
+        - title
+        - body
+        - current_value
+        - baseline_value
+        - delta_pct
+        - evidence
+        - created_at
+      type: object
+    InsightList:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/Insight"
+          type: array
+        truncated:
+          description: More insights match; raise limit or narrow the range
+          type: boolean
+      required:
+        - items
+        - truncated
+      type: object
+    ItemsAPIKey:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/APIKey"
+          type: array
+      required:
+        - items
+      type: object
+    ItemsHRPoint:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/HRPoint"
+          type: array
+      required:
+        - items
+      type: object
+    ItemsImportRow:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/ImportRow"
+          type: array
+      required:
+        - items
+      type: object
+    ItemsWorkoutType:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/WorkoutType"
+          type: array
+      required:
+        - items
+      type: object
+    LoadDay:
+      additionalProperties: false
+      properties:
+        acwr:
+          format: double
+          type:
+            - number
+            - "null"
+        atl:
+          format: double
+          type:
+            - number
+            - "null"
+        ctl:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        load:
+          format: double
+          type: number
+        sessions:
+          format: int64
+          type: integer
+        tsb:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - day
+        - load
+        - ctl
+        - atl
+        - tsb
+        - acwr
+        - sessions
+      type: object
+    McpInfo:
+      additionalProperties: false
+      properties:
+        base_url:
+          description: RITM_BASE_URL, empty when unset
+          type: string
+        catalog:
+          $ref: "#/components/schemas/Catalog"
+        path:
+          description: Path of the MCP endpoint (streamable HTTP, Bearer key with scope mcp)
+          examples:
+            - /mcp
+          type: string
+      required:
+        - path
+        - base_url
+        - catalog
+      type: object
+    MonthVolume:
+      additionalProperties: false
+      properties:
+        hours:
+          format: double
+          type: number
+        month:
+          type: string
+        sessions:
+          format: int64
+          type: integer
+      required:
+        - month
+        - sessions
+        - hours
+      type: object
+    NewAPIKey:
+      additionalProperties: false
+      properties:
+        name:
+          examples:
+            - iPhone Shortcut
+          maxLength: 80
+          minLength: 1
+          type: string
+        scope:
+          description: "ingest: upload exports and read their status; monitor: data freshness (Uptime Kuma); mcp: the MCP server"
+          enum:
+            - ingest
+            - monitor
+            - mcp
+          type: string
+      required:
+        - name
+        - scope
+      type: object
+    Overview:
+      additionalProperties: false
+      properties:
+        active_kcal_per_day:
+          $ref: "#/components/schemas/Stat"
+        asleep_min_per_night:
+          $ref: "#/components/schemas/Stat"
+        baseline_from:
+          type: string
+        baseline_to:
+          type: string
+        distance_m_per_day:
+          $ref: "#/components/schemas/Stat"
+        exercise_min_per_day:
+          $ref: "#/components/schemas/Stat"
+        freshness:
+          $ref: "#/components/schemas/Freshness"
+        from:
+          type: string
+        goals:
+          additionalProperties:
+            format: double
+            type: number
+          type: object
+        has_sleep_data:
+          type: boolean
+        hrv_sdnn_ms:
+          $ref: "#/components/schemas/Stat"
+        insights:
+          items:
+            $ref: "#/components/schemas/Insight"
+          type: array
+        resting_hr_bpm:
+          $ref: "#/components/schemas/Stat"
+        scores:
+          $ref: "#/components/schemas/Scores"
+        sessions:
+          format: int64
+          type: integer
+        sessions_target:
+          format: double
+          type: number
+        stand_hours_per_day:
+          $ref: "#/components/schemas/Stat"
+        steps_per_day:
+          $ref: "#/components/schemas/Stat"
+        to:
+          type: string
+      required:
+        - from
+        - to
+        - baseline_from
+        - baseline_to
+        - steps_per_day
+        - distance_m_per_day
+        - active_kcal_per_day
+        - stand_hours_per_day
+        - exercise_min_per_day
+        - resting_hr_bpm
+        - hrv_sdnn_ms
+        - asleep_min_per_night
+        - sessions
+        - sessions_target
+        - goals
+        - insights
+        - scores
+        - freshness
+        - has_sleep_data
+      type: object
+    PasswordChange:
+      additionalProperties: false
+      properties:
+        current_password:
+          maxLength: 72
+          minLength: 1
+          type: string
+        new_password:
+          maxLength: 72
+          minLength: 8
+          type: string
+      required:
+        - current_password
+        - new_password
+      type: object
+    PasswordConfirmation:
+      additionalProperties: false
+      properties:
+        password:
+          description: The account's current password
+          maxLength: 72
+          minLength: 1
+          type: string
+      required:
+        - password
+      type: object
+    Progress:
+      additionalProperties: false
+      properties:
+        consumed_bytes:
+          format: int64
+          type: integer
+        error:
+          type: string
+        id:
+          type: string
+        percent:
+          format: double
+          type: number
+        phase:
+          enum:
+            - queued
+            - parse
+            - recompute
+            - done
+          type: string
+        stats:
+          $ref: "#/components/schemas/ImportStats"
+        status:
+          enum:
+            - queued
+            - running
+            - succeeded
+            - failed
+          type: string
+        total_bytes:
+          format: int64
+          type: integer
+      required:
+        - id
+        - status
+        - phase
+        - consumed_bytes
+        - total_bytes
+        - percent
+      type: object
+    RangeItemsDailyActivity:
+      additionalProperties: false
+      properties:
+        from:
+          description: First day of the range
+          format: date
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/DailyActivity"
+          type: array
+        to:
+          description: Last day of the range
+          format: date
+          type: string
+      required:
+        - from
+        - to
+        - items
+      type: object
+    RangeItemsDailyHeart:
+      additionalProperties: false
+      properties:
+        from:
+          description: First day of the range
+          format: date
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/DailyHeart"
+          type: array
+        to:
+          description: Last day of the range
+          format: date
+          type: string
+      required:
+        - from
+        - to
+        - items
+      type: object
+    RangeItemsHeartEvent:
+      additionalProperties: false
+      properties:
+        from:
+          description: First day of the range
+          format: date
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/HeartEvent"
+          type: array
+        to:
+          description: Last day of the range
+          format: date
+          type: string
+      required:
+        - from
+        - to
+        - items
+      type: object
+    RangeItemsSleepNight:
+      additionalProperties: false
+      properties:
+        from:
+          description: First day of the range
+          format: date
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/SleepNight"
+          type: array
+        to:
+          description: Last day of the range
+          format: date
+          type: string
+      required:
+        - from
+        - to
+        - items
+      type: object
+    RecoveryGroup:
+      additionalProperties: false
+      properties:
+        days:
+          format: int64
+          type: integer
+        hrv_sdnn_ms:
+          format: double
+          type:
+            - number
+            - "null"
+        resting_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - days
+        - resting_hr_bpm
+        - hrv_sdnn_ms
+      type: object
+    RecoveryReport:
+      additionalProperties: false
+      properties:
+        after_rest:
+          $ref: "#/components/schemas/RecoveryGroup"
+        after_training:
+          $ref: "#/components/schemas/RecoveryGroup"
+        from:
+          format: date
+          type: string
+        to:
+          format: date
+          type: string
+      required:
+        - from
+        - to
+        - after_training
+        - after_rest
+      type: object
+    Resolved:
+      additionalProperties: false
+      properties:
+        age:
+          format: double
+          type:
+            - number
+            - "null"
+        allow_sql:
+          type: boolean
+        extra_types:
+          items:
+            type: string
+          type: array
+        goals:
+          $ref: "#/components/schemas/Goals"
+        goals_source:
+          enum:
+            - settings
+            - rings
+          type: string
+        load_model:
+          enum:
+            - edwards
+            - banister
+            - srpe
+          type: string
+        main_workout_name:
+          type: string
+        main_workout_type:
+          type: string
+        main_workout_type_effective:
+          type: string
+        max_hr:
+          format: double
+          type:
+            - number
+            - "null"
+        max_hr_bpm:
+          format: double
+          type: number
+        max_hr_source:
+          enum:
+            - manual
+            - age
+            - default
+          type: string
+        resting_hr:
+          format: double
+          type:
+            - number
+            - "null"
+        resting_hr_bpm:
+          format: double
+          type: number
+        resting_hr_source:
+          enum:
+            - manual
+            - 30d_median
+            - default
+          type: string
+        sex:
+          type: string
+        source_priority:
+          items:
+            type: string
+          type: array
+        sources:
+          items:
+            $ref: "#/components/schemas/Source"
+          type: array
+        stale_after_hours:
+          format: double
+          type:
+            - number
+            - "null"
+        timezone:
+          description: IANA time zone of local days, such as Europe/Berlin; empty = the server's RITM_TZ
+          type: string
+        waking_end_hour:
+          format: int64
+          type: integer
+        waking_start_hour:
+          format: int64
+          type: integer
+        zone_bounds:
+          items:
+            format: double
+            type: number
+          maxItems: 5
+          minItems: 5
+          type: array
+        zone_lower_bpm:
+          items:
+            format: double
+            type: number
+          maxItems: 5
+          minItems: 5
+          type: array
+        zone_model:
+          enum:
+            - karvonen
+            - hrmax
+          type: string
+      required:
+        - age
+        - sex
+        - max_hr_bpm
+        - max_hr_source
+        - resting_hr_bpm
+        - resting_hr_source
+        - zone_lower_bpm
+        - sources
+        - main_workout_type_effective
+        - main_workout_name
+        - goals_source
+        - max_hr
+        - resting_hr
+        - zone_model
+        - zone_bounds
+        - load_model
+        - goals
+        - main_workout_type
+        - source_priority
+        - waking_start_hour
+        - waking_end_hour
+        - stale_after_hours
+        - extra_types
+        - allow_sql
+        - timezone
+      type: object
+    Rings:
+      additionalProperties: false
+      properties:
+        exercise_goal_min:
+          format: double
+          type:
+            - number
+            - "null"
+        exercise_min:
+          format: double
+          type:
+            - number
+            - "null"
+        move_goal_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        move_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        stand_goal_hours:
+          format: double
+          type:
+            - number
+            - "null"
+        stand_hours:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - move_kcal
+        - move_goal_kcal
+        - exercise_min
+        - exercise_goal_min
+        - stand_hours
+        - stand_goal_hours
+      type: object
+    Route:
+      additionalProperties: false
+      properties:
+        bounds:
+          $ref: "#/components/schemas/RouteBounds"
+        distance_m:
+          format: double
+          type: number
+        elevation_gain_m:
+          format: double
+          type: number
+        end_ms:
+          format: int64
+          type: integer
+        points:
+          format: int64
+          type: integer
+        start_ms:
+          format: int64
+          type: integer
+        track:
+          items:
+            $ref: "#/components/schemas/RoutePoint"
+          type: array
+      required:
+        - track
+        - points
+        - distance_m
+        - elevation_gain_m
+        - start_ms
+        - end_ms
+        - bounds
+      type: object
+    RouteBounds:
+      additionalProperties: false
+      properties:
+        max_lat:
+          format: double
+          type: number
+        max_lon:
+          format: double
+          type: number
+        min_lat:
+          format: double
+          type: number
+        min_lon:
+          format: double
+          type: number
+      required:
+        - min_lat
+        - min_lon
+        - max_lat
+        - max_lon
+      type: object
+    RoutePoint:
+      additionalProperties: false
+      properties:
+        ele_m:
+          format: double
+          type: number
+        lat:
+          format: double
+          type: number
+        lon:
+          format: double
+          type: number
+        pace_s_per_km:
+          format: double
+          type:
+            - number
+            - "null"
+        t_ms:
+          format: int64
+          type: integer
+      required:
+        - lat
+        - lon
+        - ele_m
+        - t_ms
+        - pace_s_per_km
+      type: object
+    SRPEScale:
+      additionalProperties: false
+      properties:
+        factor:
+          format: double
+          type: number
+        rated:
+          format: int64
+          type: integer
+      required:
+        - factor
+        - rated
+      type: object
+    Score:
+      additionalProperties: false
+      properties:
+        inputs:
+          additionalProperties: {}
+          type: object
+        note:
+          type: string
+        value:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - value
+        - inputs
+        - note
+      type: object
+    Scores:
+      additionalProperties: false
+      properties:
+        activity:
+          $ref: "#/components/schemas/Score"
+        heart:
+          $ref: "#/components/schemas/Score"
+        training:
+          $ref: "#/components/schemas/Score"
+      required:
+        - activity
+        - heart
+        - training
+      type: object
+    ServerSettings:
+      additionalProperties: false
+      properties:
+        base_url:
+          description: RITM_BASE_URL, empty when unset
+          type: string
+        delta_window_hours:
+          description: RITM_DELTA_WINDOW
+          format: double
+          type: number
+        max_upload_mb:
+          description: RITM_MAX_UPLOAD_MB
+          format: int64
+          type: integer
+        stale_after_hours:
+          description: RITM_STALE_AFTER
+          format: double
+          type: number
+        timezone:
+          description: RITM_TZ, used while the user has no time zone set
+          type: string
+      required:
+        - stale_after_hours
+        - delta_window_hours
+        - timezone
+        - base_url
+        - max_upload_mb
+      type: object
+    Session:
+      additionalProperties: false
+      properties:
+        expires_at:
+          format: date-time
+          type: string
+        timezone:
+          description: IANA time zone of the user's local days (Settings, else RITM_TZ)
+          examples:
+            - Europe/Kyiv
+          type: string
+        today:
+          description: Today in that zone
+          format: date
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - user
+        - expires_at
+        - timezone
+        - today
+      type: object
+    SessionHR:
+      additionalProperties: false
+      properties:
+        avg_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        duration_s:
+          format: double
+          type:
+            - number
+            - "null"
+        id:
+          format: int64
+          type: integer
+        pct_z3_plus:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - id
+        - day
+        - avg_hr_bpm
+        - duration_s
+        - pct_z3_plus
+      type: object
+    Settings:
+      additionalProperties: false
+      properties:
+        allow_sql:
+          type: boolean
+        extra_types:
+          items:
+            type: string
+          type: array
+        goals:
+          $ref: "#/components/schemas/Goals"
+        load_model:
+          enum:
+            - edwards
+            - banister
+            - srpe
+          type: string
+        main_workout_type:
+          type: string
+        max_hr:
+          format: double
+          type:
+            - number
+            - "null"
+        resting_hr:
+          format: double
+          type:
+            - number
+            - "null"
+        source_priority:
+          items:
+            type: string
+          type: array
+        stale_after_hours:
+          format: double
+          type:
+            - number
+            - "null"
+        timezone:
+          description: IANA time zone of local days, such as Europe/Berlin; empty = the server's RITM_TZ
+          type: string
+        waking_end_hour:
+          format: int64
+          type: integer
+        waking_start_hour:
+          format: int64
+          type: integer
+        zone_bounds:
+          items:
+            format: double
+            type: number
+          maxItems: 5
+          minItems: 5
+          type: array
+        zone_model:
+          enum:
+            - karvonen
+            - hrmax
+          type: string
+      required:
+        - max_hr
+        - resting_hr
+        - zone_model
+        - zone_bounds
+        - load_model
+        - goals
+        - main_workout_type
+        - source_priority
+        - waking_start_hour
+        - waking_end_hour
+        - stale_after_hours
+        - extra_types
+        - allow_sql
+        - timezone
+      type: object
+    SettingsResponse:
+      additionalProperties: false
+      properties:
+        resolved:
+          $ref: "#/components/schemas/Resolved"
+          description: Settings with automatic values filled in from the data
+        server:
+          $ref: "#/components/schemas/ServerSettings"
+        settings:
+          $ref: "#/components/schemas/Settings"
+      required:
+        - settings
+        - resolved
+        - server
+      type: object
+    SleepNight:
+      additionalProperties: false
+      properties:
+        asleep_min:
+          format: double
+          type:
+            - number
+            - "null"
+        awake_min:
+          format: double
+          type:
+            - number
+            - "null"
+        bedtime_ms:
+          format: int64
+          type:
+            - integer
+            - "null"
+        core_min:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        deep_min:
+          format: double
+          type:
+            - number
+            - "null"
+        in_bed_min:
+          format: double
+          type:
+            - number
+            - "null"
+        rem_min:
+          format: double
+          type:
+            - number
+            - "null"
+        wake_ms:
+          format: int64
+          type:
+            - integer
+            - "null"
+      required:
+        - day
+        - in_bed_min
+        - asleep_min
+        - core_min
+        - deep_min
+        - rem_min
+        - awake_min
+        - bedtime_ms
+        - wake_ms
+      type: object
+    SleepSegment:
+      additionalProperties: false
+      properties:
+        end_ms:
+          format: int64
+          type: integer
+        stage:
+          enum:
+            - in_bed
+            - asleep
+            - core
+            - deep
+            - rem
+            - awake
+          type: string
+        start_ms:
+          format: int64
+          type: integer
+      required:
+        - stage
+        - start_ms
+        - end_ms
+      type: object
+    Source:
+      additionalProperties: false
+      properties:
+        kind:
+          enum:
+            - watch
+            - phone
+            - other
+          type: string
+        name:
+          type: string
+      required:
+        - name
+        - kind
+      type: object
+    SourceInfo:
+      additionalProperties: false
+      properties:
+        first_seen_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        kind:
+          enum:
+            - watch
+            - phone
+            - other
+          type: string
+        last_seen_at:
+          format: date-time
+          type:
+            - string
+            - "null"
+        name:
+          type: string
+      required:
+        - name
+        - kind
+        - first_seen_at
+        - last_seen_at
+      type: object
+    Stat:
+      additionalProperties: false
+      properties:
+        baseline:
+          format: double
+          type:
+            - number
+            - "null"
+        days:
+          format: int64
+          type: integer
+        delta_pct:
+          format: double
+          type:
+            - number
+            - "null"
+        value:
+          format: double
+          type:
+            - number
+            - "null"
+      required:
+        - value
+        - baseline
+        - delta_pct
+        - days
+      type: object
+    TrainingLoad:
+      additionalProperties: false
+      properties:
+        days:
+          items:
+            $ref: "#/components/schemas/LoadDay"
+          type: array
+        latest:
+          $ref: "#/components/schemas/LoadDay"
+        load_model:
+          type: string
+        srpe_scale:
+          $ref: "#/components/schemas/SRPEScale"
+      required:
+        - load_model
+        - days
+        - latest
+      type: object
+    TrainingTotals:
+      additionalProperties: false
+      properties:
+        avg_duration_min:
+          format: double
+          type:
+            - number
+            - "null"
+        avg_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        hours:
+          format: double
+          type: number
+        sessions:
+          format: int64
+          type: integer
+      required:
+        - sessions
+        - hours
+        - avg_hr_bpm
+        - avg_duration_min
+      type: object
+    TypeCoverage:
+      additionalProperties: false
+      properties:
+        count:
+          format: int64
+          type: integer
+        from:
+          type: string
+        kind:
+          enum:
+            - record
+            - hourly
+            - workout
+            - summary
+          type: string
+        name:
+          type: string
+        to:
+          type: string
+        type:
+          type: string
+      required:
+        - type
+        - name
+        - kind
+        - from
+        - to
+        - count
+      type: object
+    TypeStats:
+      additionalProperties: false
+      properties:
+        below_cutoff:
+          format: int64
+          type: integer
+        duplicate:
+          format: int64
+          type: integer
+        inserted:
+          format: int64
+          type: integer
+        scanned:
+          format: int64
+          type: integer
+        skipped:
+          format: int64
+          type: integer
+      required:
+        - scanned
+        - inserted
+        - duplicate
+        - skipped
+        - below_cutoff
+      type: object
+    User:
+      additionalProperties: false
+      properties:
+        id:
+          format: int64
+          type: integer
+        username:
+          type: string
+      required:
+        - id
+        - username
+      type: object
+    Week:
+      additionalProperties: false
+      properties:
+        hours:
+          format: double
+          type: number
+        load:
+          format: double
+          type: number
+        met:
+          type: boolean
+        partial:
+          type: boolean
+        sessions:
+          format: int64
+          type: integer
+        target:
+          format: int64
+          type: integer
+        week_start:
+          type: string
+      required:
+        - week_start
+        - sessions
+        - target
+        - met
+        - hours
+        - load
+        - partial
+      type: object
+    WeekZones:
+      additionalProperties: false
+      properties:
+        week_start:
+          type: string
+        zone_s:
+          items:
+            format: double
+            type: number
+          maxItems: 6
+          minItems: 6
+          type: array
+      required:
+        - week_start
+        - zone_s
+      type: object
+    Weekly:
+      additionalProperties: false
+      properties:
+        current_streak_weeks:
+          format: int64
+          type: integer
+        longest_streak_weeks:
+          format: int64
+          type: integer
+        main_workout_name:
+          type: string
+        main_workout_type:
+          type: string
+        monthly:
+          items:
+            $ref: "#/components/schemas/MonthVolume"
+          type: array
+        sessions:
+          items:
+            $ref: "#/components/schemas/SessionHR"
+          type: array
+        target_sessions:
+          format: int64
+          type: integer
+        totals:
+          $ref: "#/components/schemas/TrainingTotals"
+        weeks:
+          items:
+            $ref: "#/components/schemas/Week"
+          type: array
+        zones_by_week:
+          items:
+            $ref: "#/components/schemas/WeekZones"
+          type: array
+      required:
+        - target_sessions
+        - main_workout_type
+        - main_workout_name
+        - weeks
+        - current_streak_weeks
+        - longest_streak_weeks
+        - zones_by_week
+        - sessions
+        - monthly
+        - totals
+      type: object
+    WorkoutDetail:
+      additionalProperties: false
+      properties:
+        activity_type:
+          type: string
+        avg_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        distance_m:
+          format: double
+          type:
+            - number
+            - "null"
+        duration_s:
+          format: double
+          type:
+            - number
+            - "null"
+        end_ms:
+          format: int64
+          type: integer
+        energy_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        events:
+          items:
+            $ref: "#/components/schemas/WorkoutEvent"
+          type: array
+        has_route:
+          type: boolean
+        hrr60_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        id:
+          format: int64
+          type: integer
+        indoor:
+          format: int64
+          type:
+            - integer
+            - "null"
+        kcal_per_min:
+          format: double
+          type:
+            - number
+            - "null"
+        load:
+          format: double
+          type:
+            - number
+            - "null"
+        load_model:
+          type: string
+        max_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        max_hr_bpm_setting:
+          format: double
+          type: number
+        metadata:
+          additionalProperties: {}
+          type: object
+        moving_s:
+          format: double
+          type:
+            - number
+            - "null"
+        name:
+          type: string
+        notes:
+          type:
+            - string
+            - "null"
+        pace_s_per_km:
+          format: double
+          type:
+            - number
+            - "null"
+        pauses_ms:
+          items:
+            items:
+              format: int64
+              type: integer
+            maxItems: 2
+            minItems: 2
+            type: array
+          type: array
+        pct_z3_plus:
+          format: double
+          type:
+            - number
+            - "null"
+        previous_same_type_id:
+          format: int64
+          type:
+            - integer
+            - "null"
+        rpe:
+          format: int64
+          type:
+            - integer
+            - "null"
+        source:
+          type: string
+        srpe_load:
+          format: double
+          type:
+            - number
+            - "null"
+        start_ms:
+          format: int64
+          type: integer
+        statistics:
+          additionalProperties:
+            additionalProperties: {}
+            type: object
+          type: object
+        trimp_banister:
+          format: double
+          type:
+            - number
+            - "null"
+        trimp_edwards:
+          format: double
+          type:
+            - number
+            - "null"
+        tz_offset_min:
+          format: int64
+          type: integer
+        zone_lower_bpm:
+          items:
+            format: double
+            type: number
+          maxItems: 5
+          minItems: 5
+          type: array
+        zones:
+          items:
+            $ref: "#/components/schemas/ZoneTime"
+          type: array
+      required:
+        - zones
+        - events
+        - pauses_ms
+        - statistics
+        - metadata
+        - previous_same_type_id
+        - zone_lower_bpm
+        - max_hr_bpm_setting
+        - load_model
+        - id
+        - activity_type
+        - name
+        - source
+        - day
+        - start_ms
+        - end_ms
+        - tz_offset_min
+        - duration_s
+        - moving_s
+        - distance_m
+        - energy_kcal
+        - indoor
+        - avg_hr_bpm
+        - max_hr_bpm
+        - pct_z3_plus
+        - kcal_per_min
+        - trimp_edwards
+        - trimp_banister
+        - srpe_load
+        - load
+        - hrr60_bpm
+        - pace_s_per_km
+        - rpe
+        - notes
+        - has_route
+      type: object
+    WorkoutEvent:
+      additionalProperties: false
+      properties:
+        end_ms:
+          format: int64
+          type:
+            - integer
+            - "null"
+        start_ms:
+          format: int64
+          type: integer
+        type:
+          type: string
+      required:
+        - type
+        - start_ms
+        - end_ms
+      type: object
+    WorkoutList:
+      additionalProperties: false
+      properties:
+        from:
+          format: date
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/WorkoutSummary"
+          type: array
+        to:
+          format: date
+          type: string
+        truncated:
+          description: More workouts match; raise limit or narrow the range
+          type: boolean
+      required:
+        - from
+        - to
+        - items
+        - truncated
+      type: object
+    WorkoutSummary:
+      additionalProperties: false
+      properties:
+        activity_type:
+          type: string
+        avg_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        day:
+          type: string
+        distance_m:
+          format: double
+          type:
+            - number
+            - "null"
+        duration_s:
+          format: double
+          type:
+            - number
+            - "null"
+        end_ms:
+          format: int64
+          type: integer
+        energy_kcal:
+          format: double
+          type:
+            - number
+            - "null"
+        has_route:
+          type: boolean
+        hrr60_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        id:
+          format: int64
+          type: integer
+        indoor:
+          format: int64
+          type:
+            - integer
+            - "null"
+        kcal_per_min:
+          format: double
+          type:
+            - number
+            - "null"
+        load:
+          format: double
+          type:
+            - number
+            - "null"
+        max_hr_bpm:
+          format: double
+          type:
+            - number
+            - "null"
+        moving_s:
+          format: double
+          type:
+            - number
+            - "null"
+        name:
+          type: string
+        notes:
+          type:
+            - string
+            - "null"
+        pace_s_per_km:
+          format: double
+          type:
+            - number
+            - "null"
+        pct_z3_plus:
+          format: double
+          type:
+            - number
+            - "null"
+        rpe:
+          format: int64
+          type:
+            - integer
+            - "null"
+        source:
+          type: string
+        srpe_load:
+          format: double
+          type:
+            - number
+            - "null"
+        start_ms:
+          format: int64
+          type: integer
+        trimp_banister:
+          format: double
+          type:
+            - number
+            - "null"
+        trimp_edwards:
+          format: double
+          type:
+            - number
+            - "null"
+        tz_offset_min:
+          format: int64
+          type: integer
+      required:
+        - id
+        - activity_type
+        - name
+        - source
+        - day
+        - start_ms
+        - end_ms
+        - tz_offset_min
+        - duration_s
+        - moving_s
+        - distance_m
+        - energy_kcal
+        - indoor
+        - avg_hr_bpm
+        - max_hr_bpm
+        - pct_z3_plus
+        - kcal_per_min
+        - trimp_edwards
+        - trimp_banister
+        - srpe_load
+        - load
+        - hrr60_bpm
+        - pace_s_per_km
+        - rpe
+        - notes
+        - has_route
+      type: object
+    WorkoutType:
+      additionalProperties: false
+      properties:
+        activity_type:
+          examples:
+            - HKWorkoutActivityTypeFunctionalStrengthTraining
+          type: string
+        count:
+          format: int64
+          type: integer
+        name:
+          examples:
+            - Functional Strength Training
+          type: string
+      required:
+        - activity_type
+        - name
+        - count
+      type: object
+    ZoneTime:
+      additionalProperties: false
+      properties:
+        lower_bpm:
+          format: double
+          type: number
+        seconds:
+          format: double
+          type: number
+        zone:
+          format: int64
+          type: integer
+      required:
+        - zone
+        - lower_bpm
+        - seconds
+      type: object
+  securitySchemes:
+    apiKey:
+      bearerFormat: ritm_…
+      description: API key with a scope (`ingest`, `monitor`, `mcp`); see each operation's `x-ritm-scopes`.
+      scheme: bearer
+      type: http
+    session:
+      description: "Browser session from POST /api/v1/auth/login. Writes also need the header `X-Ritm-CSRF: 1`."
+      in: cookie
+      name: ritm_session
+      type: apiKey
+info:
+  description: |-
+    REST API of Ritm, a self-hosted Apple Health (Apple Watch) history: activity, heart,
+    sleep, workouts, training load and insights. The web app uses this API too.
+
+    ## Conventions
+    - All operations are under `/api/v1`. JSON field names are snake_case and carry their unit
+      (`_bpm`, `_ms`, `_kcal`, `_m`, `_min`, `_s`, `_h`, `_pct`).
+    - `*_ms` fields are UTC epoch milliseconds (timeline data); `*_at` fields are RFC 3339 timestamps;
+      `day` is a local calendar day `YYYY-MM-DD` in the server's time zone.
+    - Ranged reads take `period` (`today`, `yesterday`, `last_7d`, `last_<n>d`, `this_week`, `last_week`, `this_month`,
+      `last_month`, `ytd`, a day, or `FROM..TO`) or `from`/`to`.
+    - Collections are `{"items": [...]}`; ranged ones add `from`/`to`, capped ones `truncated`.
+    - Errors are RFC 9457 problem details (`application/problem+json`).
+
+    ## Authentication
+    - **Browser session**: the `ritm_session` cookie from `POST /api/v1/auth/login`. State-changing
+      requests must send `X-Ritm-CSRF: 1`.
+    - **API key**: `Authorization: Bearer ritm_…`, created under Settings. A key has one scope and can call
+      only the operations listing that scope (`x-ritm-scopes`): `ingest` uploads exports and reads their status
+      (e.g. from an iPhone Shortcut), `monitor` reads data freshness (Uptime Kuma), `mcp` is for the MCP server at
+      `/mcp` only.
+  title: Ritm API
+  version: dev
+openapi: 3.1.0
+paths:
+  /api/v1/account:
+    delete:
+      description: Deletes the user, their sessions, API keys and data (AUTH-5).
+      operationId: deleteAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordConfirmation"
+        required: true
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Delete the account
+      tags:
+        - Account
+    get:
+      description: The user, their time zone and today, and the build version.
+      operationId: getAccount
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Signed-in account
+      tags:
+        - Account
+  /api/v1/account/password:
+    put:
+      description: Requires the current password; the user's other sessions end (AUTH-5).
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChange"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Change password
+      tags:
+        - Account
+  /api/v1/account/reset:
+    post:
+      description: "Replaces the user's database with an empty one: imports, samples, workouts, insights, notes and settings go; the account and API keys stay (AUTH-5)."
+      operationId: resetAccountData
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordConfirmation"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Delete all health data
+      tags:
+        - Account
+  /api/v1/activity/daily:
+    get:
+      description: "Per day (default the last 30 days): steps, distance, calories, flights, exercise and stand, rings, sedentary stretch (§7.2)."
+      operationId: listDailyActivity
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+        - description: Include steps_by_hour (24 values per day)
+          explode: false
+          in: query
+          name: hours
+          schema:
+            default: true
+            description: Include steps_by_hour (24 values per day)
+            type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RangeItemsDailyActivity"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Daily activity
+      tags:
+        - Activity
+  /api/v1/api-keys:
+    get:
+      description: All keys of the user, newest first, including revoked ones (KEY-3).
+      operationId: listApiKeys
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemsAPIKey"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: List API keys
+      tags:
+        - API keys
+    post:
+      description: Keys are `ritm_` + 32 random bytes; only a hash is stored, so the secret is returned once (KEY-1).
+      operationId: createApiKey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewAPIKey"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedAPIKey"
+          description: Created
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Create an API key
+      tags:
+        - API keys
+  /api/v1/api-keys/{id}:
+    delete:
+      description: Takes effect immediately (KEY-3).
+      operationId: revokeApiKey
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Revoke an API key
+      tags:
+        - API keys
+  /api/v1/auth/config:
+    get:
+      description: Whether the login screen may offer registration.
+      operationId: getAuthConfig
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthConfig"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      summary: Login options
+      tags:
+        - Authentication
+  /api/v1/auth/login:
+    post:
+      description: Starts a browser session (cookie `ritm_session`). 10 failures per IP or username in 15 minutes lock sign-in for that window (AUTH-2).
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Credentials"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+          description: OK
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Sign in
+      tags:
+        - Authentication
+  /api/v1/auth/logout:
+    post:
+      description: Ends this browser session.
+      operationId: logout
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Sign out
+      tags:
+        - Authentication
+  /api/v1/auth/register:
+    post:
+      description: "Creates an account and signs it in. Only when RITM_REGISTRATION_ENABLED is set, otherwise 404 (AUTH-4). Username: 3–32 of `a-z 0-9 . _ -`; password: 8–72 bytes."
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Credentials"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+          description: Created
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      summary: Create an account
+      tags:
+        - Authentication
+  /api/v1/coverage:
+    get:
+      description: Date range and row count per data type, data sources and database size.
+      operationId: getCoverage
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coverage"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Data coverage
+      tags:
+        - Settings
+  /api/v1/days/{day}:
+    get:
+      description: "24-hour timeline: daily activity with hourly steps, heart summary and HR curve, stood hours, workouts, sleep and its stages."
+      operationId: getDay
+      parameters:
+        - description: YYYY-MM-DD, today or yesterday
+          in: path
+          name: day
+          required: true
+          schema:
+            description: YYYY-MM-DD, today or yesterday
+            examples:
+              - "2026-10-21"
+            type: string
+        - description: Heart-rate bucket width in seconds
+          explode: false
+          in: query
+          name: bucket_s
+          schema:
+            default: 300
+            description: Heart-rate bucket width in seconds
+            format: int64
+            maximum: 3600
+            minimum: 60
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DayDetail"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: One day in detail
+      tags:
+        - Activity
+  /api/v1/freshness:
+    get:
+      description: When data last arrived and whether it is stale (same logic as the monitor endpoint, MON-12).
+      operationId: getFreshness
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreshnessSummary"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Data freshness
+      tags:
+        - Dashboard
+  /api/v1/heart/daily:
+    get:
+      description: "Per day (default the last 90 days): HR range, resting and walking HR, HRV, VO2max, SpO2, respiration, wrist temperature (§7.3)."
+      operationId: listDailyHeart
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RangeItemsDailyHeart"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Daily heart metrics
+      tags:
+        - Heart
+  /api/v1/heart/events:
+    get:
+      description: High / low heart rate and irregular rhythm notifications, newest first (default the last 365 days).
+      operationId: listHeartEvents
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RangeItemsHeartEvent"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Heart notifications
+      tags:
+        - Heart
+  /api/v1/imports:
+    get:
+      description: The 50 most recent imports with their summaries (PRG-2), newest first.
+      operationId: listImports
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemsImportRow"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Import history
+      tags:
+        - Imports
+    post:
+      description: |-
+        Upload `export.zip` (or a bare `export.xml`) from Health → profile → Export All Health Data, as the raw request body (any content type; set `X-File-Name`) or as the first file of a multipart form. The body is streamed to disk and imported in the background; only new data is stored (G2). Follow progress at `/imports/{id}` or `/imports/{id}/events`. While another user's import holds the server-wide slot (RITM_MAX_CONCURRENT_IMPORTS), the import waits as `queued`. Works with an iPhone Shortcut: Get Contents of URL, method POST, header `Authorization: Bearer <ingest key>`, request body File.
+
+        API keys with scope `ingest` may call this operation.
+      operationId: createImport
+      parameters:
+        - description: "Full re-import: ignore what was imported before (DUP-3)"
+          explode: false
+          in: query
+          name: full
+          schema:
+            description: "Full re-import: ignore what was imported before (DUP-3)"
+            type: boolean
+        - description: File name, URL-encoded (for raw bodies; multipart uses the part's file name)
+          in: header
+          name: X-File-Name
+          schema:
+            description: File name, URL-encoded (for raw bodies; multipart uses the part's file name)
+            examples:
+              - export.zip
+            type: string
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              contentMediaType: application/octet-stream
+              format: binary
+              type: string
+          application/xml:
+            schema:
+              contentMediaType: application/octet-stream
+              format: binary
+              type: string
+          application/zip:
+            schema:
+              contentMediaType: application/octet-stream
+              format: binary
+              type: string
+          multipart/form-data:
+            schema:
+              properties:
+                file:
+                  contentMediaType: application/octet-stream
+                  format: binary
+                  type: string
+              required:
+                - file
+              type: object
+        description: The export file
+        required: true
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Import"
+          description: Accepted
+          headers:
+            Location:
+              schema:
+                description: URL of the import's status
+                type: string
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "413":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Request Entity Too Large
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+        - apiKey: []
+      summary: Upload an Apple Health export
+      tags:
+        - Imports
+      x-ritm-scopes:
+        - ingest
+  /api/v1/imports/{id}:
+    get:
+      description: |-
+        Status and summary of one import, with live progress while it runs (polling fallback of PRG-1).
+
+        API keys with scope `ingest` may call this operation.
+      operationId: getImport
+      parameters:
+        - description: Import id (UUID)
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Import id (UUID)
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Import"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+        - apiKey: []
+      summary: Import status
+      tags:
+        - Imports
+      x-ritm-scopes:
+        - ingest
+  /api/v1/imports/{id}/events:
+    get:
+      description: |-
+        Server-sent events (PRG-1): `progress` while the import runs, then one `done` with the final import. For an import that is not running, `done` (or `error`) is sent at once. Comments keep the connection alive every 15 s.
+
+        API keys with scope `ingest` may call this operation.
+      operationId: streamImportEvents
+      parameters:
+        - description: Import id (UUID)
+          in: path
+          name: id
+          required: true
+          schema:
+            description: Import id (UUID)
+            type: string
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                description: Each oneOf object in the array represents one possible Server Sent Events (SSE) message, serialized as UTF-8 text according to the SSE specification.
+                items:
+                  oneOf:
+                    - properties:
+                        data:
+                          $ref: "#/components/schemas/Import"
+                        event:
+                          const: done
+                          description: The event name.
+                          type: string
+                        id:
+                          description: The event ID.
+                          type: integer
+                        retry:
+                          description: The retry time in milliseconds.
+                          type: integer
+                      required:
+                        - data
+                        - event
+                      title: Event done
+                      type: object
+                    - properties:
+                        data:
+                          $ref: "#/components/schemas/ErrorModel"
+                        event:
+                          const: error
+                          description: The event name.
+                          type: string
+                        id:
+                          description: The event ID.
+                          type: integer
+                        retry:
+                          description: The retry time in milliseconds.
+                          type: integer
+                      required:
+                        - data
+                        - event
+                      title: Event error
+                      type: object
+                    - properties:
+                        data:
+                          $ref: "#/components/schemas/Progress"
+                        event:
+                          const: progress
+                          description: The event name.
+                          type: string
+                        id:
+                          description: The event ID.
+                          type: integer
+                        retry:
+                          description: The retry time in milliseconds.
+                          type: integer
+                      required:
+                        - data
+                        - event
+                      title: Event progress
+                      type: object
+                title: Server Sent Events
+                type: array
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+        - apiKey: []
+      summary: Import progress stream
+      tags:
+        - Imports
+      x-ritm-scopes:
+        - ingest
+  /api/v1/insights:
+    get:
+      description: Rule-based insights (§8), most recent periods first, attention before positive. Without a range, all stored periods.
+      operationId: listInsights
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+        - explode: false
+          in: query
+          name: category
+          schema:
+            enum:
+              - activity
+              - heart
+              - training
+              - recovery
+            type: string
+        - explode: false
+          in: query
+          name: polarity
+          schema:
+            enum:
+              - positive
+              - neutral
+              - attention
+            type: string
+        - description: Period kind
+          explode: false
+          in: query
+          name: kind
+          schema:
+            description: Period kind
+            enum:
+              - daily
+              - weekly
+              - monthly
+              - long_term
+            type: string
+        - description: Only the most recent period per rule
+          explode: false
+          in: query
+          name: latest
+          schema:
+            description: Only the most recent period per rule
+            type: boolean
+        - explode: false
+          in: query
+          name: limit
+          schema:
+            default: 200
+            format: int64
+            maximum: 1000
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsightList"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Insights
+      tags:
+        - Insights
+  /api/v1/mcp/catalog:
+    get:
+      description: The MCP endpoint and the tools, resources and prompts AI assistants can use.
+      operationId: getMcpCatalog
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpInfo"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: MCP server catalog
+      tags:
+        - Meta
+  /api/v1/monitor/freshness:
+    get:
+      description: |-
+        200 `ok` while data is fresh; 503 `stale` once no new Apple Health data arrived for the threshold (Settings, RITM_STALE_AFTER or `max_age`), 503 `no_data` before the first import, 500 `error` when the database is unavailable (§13). The body has only dates and counts (MON-10).
+
+        API keys with scope `monitor` may call this operation.
+      operationId: getMonitorFreshness
+      parameters:
+        - description: Override the stale threshold for this request (MON-5), e.g. 10d, 72h or 1d12h
+          explode: false
+          in: query
+          name: max_age
+          schema:
+            description: Override the stale threshold for this request (MON-5), e.g. 10d, 72h or 1d12h
+            examples:
+              - 10d
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreshnessReport"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "429":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Too Many Requests
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreshnessReport"
+          description: Stale or no data
+      security:
+        - apiKey: []
+      summary: Data freshness for Uptime Kuma
+      tags:
+        - Monitoring
+      x-ritm-scopes:
+        - monitor
+  /api/v1/overview:
+    get:
+      description: Activity, heart, sleep and training averages for a period (default the last 7 days) with deltas vs a baseline (the 28 days before for periods up to 28 days, else the preceding equal period), latest insights, scores and freshness.
+      operationId: getOverview
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Overview"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Period overview
+      tags:
+        - Dashboard
+  /api/v1/settings:
+    get:
+      description: Goals, HR zones, load model, source priority, waking hours and other settings (§7.7).
+      operationId: getSettings
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Settings
+      tags:
+        - Settings
+    put:
+      description: Replaces all settings. When a setting that feeds derived data changes, derived tables and insights are recomputed before the response (§7.7).
+      operationId: putSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Settings"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Replace settings
+      tags:
+        - Settings
+  /api/v1/sleep/nights:
+    get:
+      description: One row per night, keyed by the wake-up day (default the last 30 days, §7.4).
+      operationId: listSleepNights
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RangeItemsSleepNight"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Nightly sleep
+      tags:
+        - Sleep
+  /api/v1/sleep/recovery:
+    get:
+      description: Mean resting HR and HRV on mornings after training days vs after rest days (default the last 30 days, UC6).
+      operationId: getSleepRecovery
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecoveryReport"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Next-day recovery
+      tags:
+        - Sleep
+  /api/v1/training/load:
+    get:
+      description: Daily load with fitness (CTL), fatigue (ATL), form (TSB) and ACWR (default the last 91 days, §7.6).
+      operationId: getTrainingLoad
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingLoad"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Training load
+      tags:
+        - Training
+  /api/v1/training/weekly:
+    get:
+      description: Main-type sessions per ISO week vs the target, streaks, zones per week, session HR, monthly volume and totals (default the last 91 days).
+      operationId: getTrainingWeekly
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Weekly"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Training consistency
+      tags:
+        - Training
+  /api/v1/workout-types:
+    get:
+      description: Activity types present in the data with their counts, most frequent first.
+      operationId: listWorkoutTypes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemsWorkoutType"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Workout types
+      tags:
+        - Workouts
+  /api/v1/workouts:
+    get:
+      description: Workouts with key metrics, newest first (default the last 90 days).
+      operationId: listWorkouts
+      parameters:
+        - description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+          explode: false
+          in: query
+          name: period
+          schema:
+            description: today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to.
+            examples:
+              - last_30d
+            type: string
+        - description: First day (YYYY-MM-DD, or a period name meaning its first day)
+          explode: false
+          in: query
+          name: from
+          schema:
+            description: First day (YYYY-MM-DD, or a period name meaning its first day)
+            examples:
+              - "2026-09-01"
+            type: string
+        - description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+          explode: false
+          in: query
+          name: to
+          schema:
+            description: Last day (YYYY-MM-DD, or a period name meaning its last day; default today)
+            examples:
+              - "2026-09-30"
+            type: string
+        - description: Only this HealthKit workout type
+          explode: false
+          in: query
+          name: type
+          schema:
+            description: Only this HealthKit workout type
+            examples:
+              - HKWorkoutActivityTypeFunctionalStrengthTraining
+            type: string
+        - explode: false
+          in: query
+          name: limit
+          schema:
+            default: 200
+            format: int64
+            maximum: 2000
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutList"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Workouts
+      tags:
+        - Workouts
+  /api/v1/workouts/{id}:
+    get:
+      description: Metrics, time in HR zones, events and pauses, Apple statistics, RPE and notes, and the previous workout of the same type (§7.5).
+      operationId: getWorkout
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: int64
+            minimum: 1
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Workout detail
+      tags:
+        - Workouts
+  /api/v1/workouts/{id}/annotation:
+    put:
+      description: Stores RPE (1–10) and notes; they survive re-imports. RPE feeds the sRPE load, so derived data is recomputed from the workout's day.
+      operationId: setWorkoutAnnotation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: int64
+            minimum: 1
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Annotation"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Set RPE and notes
+      tags:
+        - Workouts
+  /api/v1/workouts/{id}/heart-rate:
+    get:
+      description: The HR curve from the start to 2 minutes after the end, bucketed to about `points` points.
+      operationId: getWorkoutHeartRate
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Approximate number of points
+          explode: false
+          in: query
+          name: points
+          schema:
+            default: 300
+            description: Approximate number of points
+            format: int64
+            maximum: 2000
+            minimum: 10
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemsHRPoint"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Workout heart rate
+      tags:
+        - Workouts
+  /api/v1/workouts/{id}/route:
+    get:
+      description: The downsampled GPS track with pace, distance, climb and bounds (PAR-9). 404 when the workout has no route.
+      operationId: getWorkoutRoute
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            format: int64
+            minimum: 1
+            type: integer
+        - description: Approximate number of track points
+          explode: false
+          in: query
+          name: points
+          schema:
+            default: 500
+            description: Approximate number of track points
+            format: int64
+            maximum: 2000
+            minimum: 2
+            type: integer
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Route"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Workout GPS route
+      tags:
+        - Workouts
+  /healthz:
+    get:
+      description: 200 when the server is up and the accounts database answers, 503 otherwise. No authentication (MON-11).
+      operationId: health
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+          description: OK
+        "503":
+          description: Database unavailable
+      summary: Liveness probe
+      tags:
+        - Meta

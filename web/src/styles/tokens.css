@@ -1,0 +1,79 @@
+/* Design tokens — dark theme only (UI-D1…D4). Contrast checked against --bg/--surface. */
+:root {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --surface: #161920;
+  --elevated: #1e222b;
+  --border: #2a2f3a;
+  --border-strong: #3a4150;
+  --text: #e6e8eb;
+  --text-2: #b4bac5;
+  --muted: #8a92a0;
+  --accent: #7aa2ff;
+  --accent-strong: #9ab8ff;
+  --accent-bg: rgba(122, 162, 255, 0.14);
+  --positive: #4cc38a;
+  --positive-bg: rgba(76, 195, 138, 0.14);
+  --neutral: #9aa8c2;
+  --neutral-bg: rgba(154, 168, 194, 0.14);
+  --attention: #f2a24a;
+  --attention-bg: rgba(242, 162, 74, 0.15);
+  --danger: #f07070;
+
+  /* Chart colours. Categorical slots validated (dataviz validate_palette.js, dark, surface
+     #161920): CVD ΔE ≥ 8 and normal-vision ΔE ≥ 15 for every pair that shares a chart.
+     One colour per entity app-wide; grey (--c-context) marks context such as daily dots,
+     ranges and baselines. */
+  --s-blue: #3987e5;
+  --s-orange: #d95926;
+  --s-aqua: #199e70;
+  --s-yellow: #c98500;
+  --s-magenta: #d55181;
+  --s-green: #008300;
+  --s-violet: #9085e9;
+  --s-red: #e66767;
+  --c-context: #6c7486;
+
+  --c-steps: var(--s-blue);
+  --c-active: var(--s-orange); /* active energy = Move ring */
+  --c-basal: var(--c-context);
+  --c-exercise: var(--s-aqua);
+  --c-stand: var(--s-blue);
+  --c-hr: var(--s-red);
+  --c-hrv: var(--s-violet);
+  --c-walk: var(--s-magenta);
+  --c-vo2: var(--s-green);
+  --c-spo2: var(--s-blue);
+  --c-sleep: var(--s-violet);
+  --c-deep: var(--s-violet);
+  --c-rem: var(--s-aqua);
+  --c-core: var(--s-blue);
+  --c-awake: var(--s-yellow);
+
+  /* HR zones are ordered intensity: one hue, light → dark (validated as an ordinal ramp). */
+  --zone0: var(--c-context);
+  --zone1: #ecc6a0;
+  --zone2: #e8a46a;
+  --zone3: #e07d3c;
+  --zone4: #c95a1e;
+  --zone5: #9e3d12;
+  /* route pace, fast → slow (workout map) */
+  --pace1: #5fd0b0;
+  --pace2: #6cb7e8;
+  --pace3: #9a9cf0;
+  --pace4: #d07fd0;
+  --pace5: #f07a8a;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --gap: 12px;
+  --tap: 44px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --tabbar-h: 60px;
+  --sidebar-w: 220px;
+}

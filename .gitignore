@@ -1,0 +1,13 @@
+/bin/
+/data/
+.env
+*.zip
+export.xml
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+.DS_Store
+/ritm
+# screenshots of the running app contain personal health data
+docs/*.png
+/.idea/
