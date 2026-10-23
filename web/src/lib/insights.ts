@@ -5,7 +5,7 @@ import type { Insight, Polarity } from './types'
 
 /** An insight shown as one row; earlier consecutive periods of the same rule ride along. */
 export type Row = { insight: Insight; repeats: Insight[] }
-export type Group = { key: string; title: string; sub: string; rows: Row[] }
+type Group = { key: string; title: string; sub: string; rows: Row[] }
 
 const BLOCK: Record<Insight['period_kind'], number> = { daily: 1, weekly: 7, monthly: 28, long_term: 91 }
 const POLARITY_RANK: Record<Polarity, number> = { attention: 0, positive: 1, neutral: 2 }
@@ -13,7 +13,7 @@ const KIND_RANK: Record<Insight['period_kind'], number> = { daily: 0, weekly: 1,
 
 const daysBetween = (a: string, b: string) => Math.round((parseDay(b).getTime() - parseDay(a).getTime()) / 86400000)
 
-export function mondayOf(day: string): string {
+function mondayOf(day: string): string {
   return addDays(day, -((parseDay(day).getDay() + 6) % 7))
 }
 

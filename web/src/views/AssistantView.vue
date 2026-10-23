@@ -16,18 +16,18 @@ const copy = useCopy()
 const endpoint = computed(() => `${info.data.value?.base_url || window.location.origin}${info.data.value?.path ?? '/mcp'}`)
 const usingOrigin = computed(() => info.data.value && !info.data.value.base_url)
 
-// Key: an existing mcp key (its secret is not stored, so snippets show a placeholder) or a new one.
-const mcpKeys = computed(() => (keys.data.value?.items ?? []).filter((k) => k.scope === 'mcp' && !k.revoked_at))
+// Key: an existing read key (its secret is not stored, so snippets show a placeholder) or a new one.
+const readKeys = computed(() => (keys.data.value?.items ?? []).filter((k) => k.scope === 'read' && !k.revoked_at))
 const choice = ref<number | 'new'>('new')
-watch(mcpKeys, (list) => {
+watch(readKeys, (list) => {
   if (choice.value === 'new' && list.length && !created.value) choice.value = list[0].id
 })
 const newName = ref('Claude')
 async function createKey() {
-  const k = await create(newName.value, 'mcp')
+  const k = await create(newName.value, 'read')
   if (k) choice.value = k.key.id
 }
-const selected = computed(() => mcpKeys.value.find((k) => k.id === choice.value))
+const selected = computed(() => readKeys.value.find((k) => k.id === choice.value))
 const secret = computed(() => (created.value && created.value.key.id === choice.value ? created.value.secret : null))
 const keyText = computed(() => secret.value ?? 'ritm_…')
 
@@ -105,10 +105,10 @@ const examples = [
       </div>
     </Card>
 
-    <Card title="1 · Choose an API key" subtitle="Keys with the mcp scope are read-only and can be revoked any time">
+    <Card title="1 · Choose an API key" subtitle="Read keys cannot change anything and can be revoked any time">
       <StateBlock :loading="keys.loading.value" :error="keys.error.value">
         <div class="keys" role="radiogroup" aria-label="API key">
-          <label v-for="k in mcpKeys" :key="k.id" class="opt" :class="{ on: choice === k.id }">
+          <label v-for="k in readKeys" :key="k.id" class="opt" :class="{ on: choice === k.id }">
             <input v-model="choice" type="radio" name="key" :value="k.id" />
             <span class="grow">
               <strong>{{ k.name }}</strong> <code class="small">{{ k.prefix }}…</code>

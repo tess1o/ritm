@@ -1,4 +1,4 @@
-/* Design tokens — dark theme only (UI-D1…D4). Contrast checked against --bg/--surface. */
+/* Design tokens — dark theme only. Contrast checked against --bg/--surface. */
 :root {
   color-scheme: dark;
   --bg: #0f1115;
@@ -12,6 +12,7 @@
   --accent: #7aa2ff;
   --accent-strong: #9ab8ff;
   --accent-bg: rgba(122, 162, 255, 0.14);
+  --on-accent: #0b1020; /* text and marks on an accent or bright fill */
   --positive: #4cc38a;
   --positive-bg: rgba(76, 195, 138, 0.14);
   --neutral: #9aa8c2;
@@ -25,6 +26,8 @@
      One colour per entity app-wide; grey (--c-context) marks context such as daily dots,
      ranges and baselines. */
   --s-blue: #3987e5;
+  --s-blue-dark: #184f95; /* steps heatmap levels around --s-blue */
+  --s-blue-light: #9ec5f4;
   --s-orange: #d95926;
   --s-aqua: #199e70;
   --s-yellow: #c98500;

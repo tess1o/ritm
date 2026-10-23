@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -111,6 +112,15 @@ func TestCalendar(t *testing.T) {
 	if cal.From != "2026-08-01" || cal.To != "2026-08-31" || len(cal.Items) == 0 || cal.LastDay == nil || *cal.LastDay != cal.Items[len(cal.Items)-1].Day {
 		t.Fatalf("calendar %+v", cal)
 	}
+	watch := 0
+	for _, d := range cal.Items {
+		if d.Watch {
+			watch++
+		}
+	}
+	if watch == 0 {
+		t.Fatalf("calendar has no Watch days: %+v", cal.Items)
+	}
 	if code, _ := s.do("GET", "/api/v1/calendar?from=2025-08-01&to=2025-08-31", alice, nil, &cal); code != http.StatusOK || len(cal.Items) != 0 || cal.LastDay == nil {
 		t.Fatalf("calendar before data: %d %+v", code, cal)
 	}
@@ -131,7 +141,7 @@ func TestProblemsAndCSRF(t *testing.T) {
 			t.Fatalf("want a %d problem, got %d %q %s", status, w.Code, w.Header().Get("Content-Type"), w.Body)
 		}
 	}
-	problem(s.raw("POST", "/api/v1/api-keys", []byte(`{"name":"x","scope":"mcp"}`), cookie), http.StatusForbidden)
+	problem(s.raw("POST", "/api/v1/api-keys", []byte(`{"name":"x","scope":"read"}`), cookie), http.StatusForbidden)
 	problem(s.raw("GET", "/api/v1/activity/daily?period=fortnight", nil, cookie), http.StatusBadRequest)
 	problem(s.raw("GET", "/api/v1/overview", nil, nil), http.StatusUnauthorized)
 	problem(s.raw("GET", "/api/v1/nope", nil, cookie), http.StatusNotFound)
@@ -154,5 +164,63 @@ func TestOpenAPIUpToDate(t *testing.T) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatal("docs/openapi.yaml is out of date; run `make openapi`")
+	}
+}
+
+// A read key reads every kind of health data over REST, and can change nothing.
+func TestReadKey(t *testing.T) {
+	ctx := context.Background()
+	o := synth.Options{Start: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), Days: 14, Loc: time.UTC, Seed: 1, Sleep: true,
+		HRIntervalSec: 1800, WorkoutHRIntervalSec: 60}
+	s := newTestServer(t, true, o.Start.AddDate(0, 0, o.Days).Add(10*time.Hour))
+	alice := s.register("alice")
+	readKey := s.createKey(alice, "Grafana", auth.ScopeRead)
+	ingestKey := s.createKey(alice, "Shortcut", auth.ScopeIngest)
+	monKey := s.createKey(alice, "Kuma", auth.ScopeMonitor)
+	info, _ := s.auth.UserByName(ctx, "alice")
+	tn, err := s.tenants.Get(ctx, info.User)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.importSynth(tn, o)
+
+	var workouts struct{ Items []struct{ ID int64 } }
+	if code := s.bearer("/api/v1/workouts?period=last_30d", readKey, &workouts); code != http.StatusOK || len(workouts.Items) == 0 {
+		t.Fatalf("workouts: %d, %d items", code, len(workouts.Items))
+	}
+	wid := fmt.Sprint(workouts.Items[0].ID)
+	reads := []string{
+		"/api/v1/overview?period=last_7d", "/api/v1/freshness", "/api/v1/insights", "/api/v1/days/2026-01-10",
+		"/api/v1/calendar?period=last_30d", "/api/v1/activity/daily?period=last_30d", "/api/v1/heart/daily?period=last_30d",
+		"/api/v1/heart/events?period=last_30d", "/api/v1/sleep/nights?period=last_30d", "/api/v1/sleep/recovery",
+		"/api/v1/coverage", "/api/v1/workout-types", "/api/v1/workouts/" + wid, "/api/v1/workouts/" + wid + "/heart-rate",
+		"/api/v1/training/load?period=last_30d", "/api/v1/training/weekly?period=last_30d",
+	}
+	for _, p := range reads {
+		if code := s.bearer(p, readKey, nil); code != http.StatusOK {
+			t.Errorf("read key GET %s: %d", p, code)
+		}
+		for name, k := range map[string]string{"ingest": ingestKey, "monitor": monKey} {
+			if code := s.bearer(p, k, nil); code != http.StatusForbidden {
+				t.Errorf("%s key GET %s: %d, want 403", name, p, code)
+			}
+		}
+	}
+	for _, p := range []string{"/api/v1/settings", "/api/v1/api-keys", "/api/v1/imports", "/api/v1/account", "/api/v1/mcp/catalog"} {
+		if code := s.bearer(p, readKey, nil); code != http.StatusForbidden {
+			t.Errorf("read key GET %s: %d, want 403", p, code)
+		}
+	}
+	bearer := map[string]string{"Authorization": "Bearer " + readKey, "Content-Type": "application/json"}
+	writes := []struct{ method, path, body string }{
+		{"PUT", "/api/v1/workouts/" + wid + "/annotation", `{"rpe":5,"notes":"x"}`},
+		{"PUT", "/api/v1/settings", `{}`},
+		{"POST", "/api/v1/api-keys", `{"name":"x","scope":"read"}`},
+		{"POST", "/api/v1/imports", `x`},
+	}
+	for _, w := range writes {
+		if r := s.raw(w.method, w.path, []byte(w.body), bearer); r.Code != http.StatusForbidden {
+			t.Errorf("read key %s %s: %d, want 403", w.method, w.path, r.Code)
+		}
 	}
 }

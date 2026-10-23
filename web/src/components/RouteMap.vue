@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// GPS route of an outdoor workout on a street map, darkened to match the theme (UI-D6). Leaflet is only loaded with this
+// GPS route of an outdoor workout on a street map, darkened to match the theme. Leaflet is only loaded with this
 // component, which Workout detail imports lazily for workouts that have a route.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 // The ES module build: the default (UMD) entry would pull a CommonJS-interop chunk shared with ECharts.
@@ -20,7 +20,7 @@ let layer: L.LayerGroup | null = null
 let ro: ResizeObserver | null = null
 
 // Pace buckets relative to this workout (fast → slow); the legend names their ranges, so the
-// colour is never the only cue (UI-D5).
+// colour is never the only cue.
 const paceTokens = ['--pace1', '--pace2', '--pace3', '--pace4', '--pace5']
 
 const buckets = computed(() => {

@@ -71,7 +71,7 @@ func FinishImport(ctx context.Context, db *store.DB, id string, st *ImportStats,
 	return err
 }
 
-// RecoverInterrupted marks imports left running by a crash or restart as failed (ING-3).
+// RecoverInterrupted marks imports left running by a crash or restart as failed.
 func RecoverInterrupted(ctx context.Context, db *store.DB, now time.Time) (int64, error) {
 	res, err := db.W.ExecContext(ctx, `UPDATE imports SET status = ?, finished_at = ?, error = 'interrupted by server restart'
 		WHERE status IN (?, ?)`, StatusFailed, now.UnixMilli(), StatusRunning, StatusQueued)
@@ -127,7 +127,7 @@ func listImports(ctx context.Context, q store.Querier, tail string, args ...any)
 	return out, rows.Err()
 }
 
-// PostImportFunc recomputes derived data from the earliest affected day (§6.8). It is called
+// PostImportFunc recomputes derived data from the earliest affected day. It is called
 // after every successful import, with "" when nothing new was stored, so it can also finish a
 // recompute that an earlier failure left pending.
 type PostImportFunc func(ctx context.Context, earliestDay string) error

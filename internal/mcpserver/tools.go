@@ -22,7 +22,7 @@ type tools struct {
 	t    *tenant.Tenant
 }
 
-// toolOrder is the order tools are listed in the UI (spec §10).
+// toolOrder is the order tools are listed in the UI.
 var toolOrder = []string{"get_overview", "get_insights", "get_daily_activity", "get_day_detail", "get_heart_metrics",
 	"get_sleep", "list_workouts", "get_workout", "get_training_load", "compare_periods", "get_settings", "query_sql"}
 

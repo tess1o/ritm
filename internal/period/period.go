@@ -1,4 +1,4 @@
-// Package period resolves period expressions used by the REST API and MCP tools (MCP-2).
+// Package period resolves period expressions used by the REST API and MCP tools.
 package period
 
 import (

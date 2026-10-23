@@ -49,7 +49,7 @@ const stagesOption = computed(() => {
   }
 })
 
-// Next-day recovery after training vs rest days (UC6), computed by the server with the same rule
+// Next-day recovery after training vs rest days, computed by the server with the same rule
 // as the recovery insight.
 const recovery = computed(() => rec.data.value)
 

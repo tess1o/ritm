@@ -1,6 +1,6 @@
 // Command genexport writes a synthetic Apple Health export.zip for development and benchmarks.
 //
-//	go run ./tools/genexport -days 180 -o testdata/synthetic.zip
+//	go run ./tools/genexport -days 180 -o data/synthetic-export.zip
 package main
 
 import (

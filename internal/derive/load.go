@@ -42,7 +42,7 @@ type loadRow struct {
 	edwards, banister, srpe sql.NullFloat64
 }
 
-// workoutLoad is one workout's load in the selected model (§7.6). sRPE (RPE × minutes) and TRIMP
+// workoutLoad is one workout's load in the selected model. sRPE (RPE × minutes) and TRIMP
 // are different scales, so unrated workouts get TRIMP converted with the scale factor.
 func workoutLoad(model string, w loadRow, sc SRPEScale) float64 {
 	switch model {
@@ -73,7 +73,7 @@ func srpeScale(ws []loadRow) SRPEScale {
 }
 
 // computeLoad stores each workout's load and rebuilds daily_load: daily load, CTL/ATL EWMAs, TSB
-// and ACWR (§7.6).
+// and ACWR.
 func (e *Engine) computeLoad(ctx context.Context, tx *sql.Tx, res *Resolved, lastDay days.Day) error {
 	rows, err := tx.QueryContext(ctx, `SELECT w.id, w.start_ms, w.tz_offset_min, w.activity_type, m.trimp_edwards, m.trimp_banister, m.srpe_load
 		FROM workouts w LEFT JOIN workout_metrics m ON m.workout_id = w.id ORDER BY w.start_ms`)

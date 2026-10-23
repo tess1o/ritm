@@ -22,7 +22,7 @@ const batchSize = 5000
 // Options control one import run.
 type Options struct {
 	ImportID    string
-	Full        bool // ignore high-water marks (DUP-3)
+	Full        bool // ignore high-water marks
 	DeltaWindow time.Duration
 	Loc         *time.Location // fallback zone for dates without an offset
 	// Progress is called periodically with consumed and total uncompressed bytes.
@@ -46,7 +46,7 @@ type TypeStats struct {
 	BelowCutoff int64 `json:"below_cutoff"`
 }
 
-// ImportStats is the import summary stored in imports.stats_json (PRG-2).
+// ImportStats is the import summary stored in imports.stats_json.
 type ImportStats struct {
 	ExportDateMS     int64                 `json:"export_date_ms,omitempty"`
 	XMLBytes         int64                 `json:"xml_bytes"`
@@ -206,7 +206,7 @@ func Import(ctx context.Context, db *store.DB, path string, opts Options) (*Impo
 
 	st := w.stats
 	for typ, n := range parser.Skipped {
-		opts.Logger.Warn("skipped malformed elements", "type", typ, "count", n) // PAR-8
+		opts.Logger.Warn("skipped malformed elements", "type", typ, "count", n)
 		w.typeStats(typ).Skipped += int64(n)
 		if typ == "Workout" {
 			st.Workouts.Skipped += int64(n)
@@ -281,7 +281,7 @@ func newWriter(ctx context.Context, db *store.DB, opts Options, types typeSet) (
 		for t, ms := range w.hwm {
 			c := ms - opts.DeltaWindow.Milliseconds()
 			w.cutoffMS[t] = c
-			// cumulative data is replaced per whole local day (AGG-3)
+			// cumulative data is replaced per whole local day
 			_, off := time.UnixMilli(c).In(opts.Loc).Zone()
 			w.cutoffDay[t] = LocalDay(c, off/60)
 		}
@@ -580,8 +580,8 @@ func statsMap(stats []WorkoutStat) map[string]WorkoutStat {
 	return m
 }
 
-// finish moves staged hourly buckets into hourly_activity (AGG-3), advances high-water marks
-// (DUP-2), records sources and updates data freshness — all in one transaction.
+// finish moves staged hourly buckets into hourly_activity, advances high-water marks,
+// records sources and updates data freshness — all in one transaction.
 func (w *writer) finish(ctx context.Context, sources map[string]*SourceInfo) error {
 	return store.InTx(ctx, w.db.W, func(tx *sql.Tx) error {
 		types := make([]string, 0, len(w.types.cumulative))
@@ -668,7 +668,7 @@ func (w *writer) finish(ctx context.Context, sources map[string]*SourceInfo) err
 			}
 		}
 
-		// MON-1: newest Watch-sourced sample; any source when no Watch was ever seen.
+		// Newest Watch-sourced sample; any source when no Watch was ever seen.
 		last := w.lastWatchMS
 		if !w.watchSeen {
 			last = w.lastAnyMS
@@ -676,14 +676,14 @@ func (w *writer) finish(ctx context.Context, sources map[string]*SourceInfo) err
 		w.stats.LastDataMS = last
 		_, err := tx.ExecContext(ctx, `UPDATE data_freshness SET
 			last_data_at = CASE WHEN ? > ifnull(last_data_at, 0) THEN ? ELSE last_data_at END,
-			last_import_at = ?, last_import_id = ? WHERE id = 1`,
+			last_import_at = ?, last_import_id = ?, data_version = data_version + 1 WHERE id = 1`,
 			last, last, w.opts.now().UnixMilli(), w.opts.ImportID)
 		return err
 	})
 }
 
-// storeRoutes parses the GPX files of workouts that have route files but no stored route yet
-// (PAR-9): new workouts, and workouts imported before routes were stored, so re-uploading an
+// storeRoutes parses the GPX files of workouts that have route files but no stored route yet:
+// new workouts, and workouts imported before routes were stored, so re-uploading an
 // export fills in the history. It runs after the XML pass. Missing files are reported only for
 // workouts new in this import; older ones are retried quietly on the next upload.
 func (w *writer) storeRoutes(ctx context.Context, src *source) error {
@@ -736,22 +736,35 @@ func (w *writer) storeRoutes(ctx context.Context, src *source) error {
 				}
 				continue
 			}
-			rc, err := src.zip.File[idx].Open()
+			f := src.zip.File[idx]
+			if f.UncompressedSize64 > maxGPXBytes {
+				errs = append(errs, fmt.Sprintf("%s: larger than %d MB", name, maxGPXBytes>>20))
+				continue
+			}
+			if len(points) == maxRoutePoints {
+				errs = append(errs, fmt.Sprintf("%s: %v for one workout", name, errTooManyPoints))
+				continue
+			}
+			rc, err := f.Open()
 			if err != nil {
 				return err
 			}
-			pts, err := parseGPX(rc)
+			pts, err := parseGPX(rc, maxRoutePoints-len(points))
 			rc.Close()
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("%s: %v", name, err))
-				continue
+				if !errors.Is(err, errTooManyPoints) {
+					continue
+				}
 			}
 			points = append(points, pts...)
 		}
 		if len(points) == 0 {
 			continue
 		}
-		if _, err := w.db.W.ExecContext(ctx, "INSERT OR REPLACE INTO workout_routes (workout_id, points) VALUES (?, ?)", p.id, EncodeRoute(points)); err != nil {
+		if err := store.InTx(ctx, w.db.W, func(tx *sql.Tx) error {
+			return saveRoute(ctx, tx, p.id, points)
+		}); err != nil {
 			return err
 		}
 		w.stats.RoutesStored++

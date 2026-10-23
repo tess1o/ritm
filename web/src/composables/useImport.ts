@@ -47,7 +47,7 @@ async function pollOnce(id: string) {
   }
 }
 
-/** Follow an import over SSE, falling back to polling (PRG-1, UI-M7). */
+/** Follow an import over SSE, falling back to polling. */
 function watchImport(id: string) {
   stopWatching()
   phase.value = 'processing'

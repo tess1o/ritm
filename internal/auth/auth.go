@@ -1,4 +1,4 @@
-// Package auth implements user accounts, browser sessions, login rate limiting and API keys (§5).
+// Package auth implements user accounts, browser sessions, login rate limiting and API keys.
 package auth
 
 import (
@@ -32,27 +32,29 @@ type User struct {
 }
 
 type Service struct {
-	db         *store.DB
-	clock      clock.Clock
-	sessionTTL time.Duration
-	limiter    *RateLimiter // failed logins and password re-checks, per IP
-	userLimit  *RateLimiter // failed logins per username, which a spoofed IP cannot evade
-	regLimiter *RateLimiter // every registration attempt
-	keyLimiter *RateLimiter // invalid API keys
+	db            *store.DB
+	clock         clock.Clock
+	sessionTTL    time.Duration
+	limiter       *RateLimiter // failed logins and password re-checks, per IP
+	userLimit     *RateLimiter // failed logins per username, which a spoofed IP cannot evade
+	regLimiter    *RateLimiter // every registration attempt
+	keyLimiter    *RateLimiter // tokens that match no API key, per IP
+	staleKeyLimit *RateLimiter // revoked keys and keys of suspended users, per key
 
 	keyUsed lastUsedThrottle
 }
 
 func NewService(db *store.DB, clk clock.Clock, sessionTTL time.Duration) *Service {
 	return &Service{
-		db:         db,
-		clock:      clk,
-		sessionTTL: sessionTTL,
-		limiter:    NewRateLimiter(clk, 10, 15*time.Minute),
-		userLimit:  NewRateLimiter(clk, 10, 15*time.Minute),
-		regLimiter: NewRateLimiter(clk, 5, time.Hour),
-		keyLimiter: NewRateLimiter(clk, 20, 15*time.Minute),
-		keyUsed:    lastUsedThrottle{last: map[int64]time.Time{}},
+		db:            db,
+		clock:         clk,
+		sessionTTL:    sessionTTL,
+		limiter:       NewRateLimiter(clk, 10, 15*time.Minute),
+		userLimit:     NewRateLimiter(clk, 10, 15*time.Minute),
+		regLimiter:    NewRateLimiter(clk, 5, time.Hour),
+		keyLimiter:    NewRateLimiter(clk, 20, 15*time.Minute),
+		staleKeyLimit: NewRateLimiter(clk, 20, 15*time.Minute),
+		keyUsed:       lastUsedThrottle{last: map[int64]time.Time{}},
 	}
 }
 
@@ -60,7 +62,11 @@ func NewService(db *store.DB, clk clock.Clock, sessionTTL time.Duration) *Servic
 // correct password gets ErrSuspended; anything else wrong is ErrInvalidCredentials.
 func (s *Service) Login(ctx context.Context, ip, username, password string) (string, User, error) {
 	name := normalizeUsername(username)
-	if !s.limiter.Allow(ip) || !s.userLimit.Allow(name) {
+	if !s.limiter.Take(ip) {
+		return "", User{}, ErrRateLimited
+	}
+	if !s.userLimit.Take(name) {
+		s.limiter.Refund(ip)
 		return "", User{}, ErrRateLimited
 	}
 	var (
@@ -71,6 +77,8 @@ func (s *Service) Login(ctx context.Context, ip, username, password string) (str
 	err := s.db.W.QueryRowContext(ctx, "SELECT id, username, db_name, password_hash, suspended_at FROM users WHERE username = ?",
 		name).Scan(&u.ID, &u.Username, &u.DBName, &hash, &suspended)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		s.limiter.Refund(ip)
+		s.userLimit.Refund(name)
 		return "", User{}, err
 	}
 	if hash == "" {
@@ -79,11 +87,11 @@ func (s *Service) Login(ctx context.Context, ip, username, password string) (str
 	}
 	passOK := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 	if !passOK || u.ID == 0 {
-		s.limiter.Fail(ip)
-		s.userLimit.Fail(name)
 		return "", User{}, ErrInvalidCredentials
 	}
-	s.limiter.Reset(ip)
+	// Only this attempt is handed back: signing into one account must not clear the IP's earlier
+	// failures against others.
+	s.limiter.Refund(ip)
 	s.userLimit.Reset(name)
 	if suspended.Valid {
 		return "", User{}, ErrSuspended

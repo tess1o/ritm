@@ -1,4 +1,4 @@
-// Package mcpserver is Ritm's MCP server (§10): read-only tools, resources and prompts over the
+// Package mcpserver is Ritm's MCP server: read-only tools, resources and prompts over the
 // signed-in key owner's database, served as streamable HTTP at /mcp.
 //
 // The handler runs in stateless mode: every POST gets a temporary session on the server of the
@@ -49,7 +49,7 @@ type Deps struct {
 	Version string
 }
 
-// Handler serves MCP for requests that passed auth.RequireKey(auth.ScopeMCP).
+// Handler serves MCP for requests that passed auth.RequireKey(auth.ScopeRead).
 type Handler struct {
 	deps Deps
 	h    http.Handler

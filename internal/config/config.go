@@ -1,4 +1,4 @@
-// Package config reads Ritm's configuration from environment variables (§4).
+// Package config reads Ritm's configuration from environment variables.
 package config
 
 import (
@@ -26,8 +26,8 @@ type Config struct {
 	DeltaWindow          time.Duration
 	LogLevel             slog.Level
 	StaleAfter           time.Duration
-	// TrustedProxies are the peers whose X-Forwarded-For is believed; nil = loopback and private
-	// addresses, empty = none.
+	// TrustedProxies are the peers whose X-Forwarded-For is believed; nil = loopback only,
+	// empty = none.
 	TrustedProxies []netip.Prefix
 }
 
@@ -131,7 +131,7 @@ func parseProxies(v string) ([]netip.Prefix, error) {
 	if strings.EqualFold(v, "none") {
 		return out, nil
 	}
-	for _, f := range strings.Split(v, ",") {
+	for f := range strings.SplitSeq(v, ",") {
 		f = strings.TrimSpace(f)
 		if f == "" {
 			continue

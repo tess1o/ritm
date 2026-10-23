@@ -18,7 +18,7 @@ defineProps<{ items: StripItem[]; vs?: string }>()
   <div class="strip" :style="{ '--cols': Math.min(items.length, 4) }">
     <component :is="it.to ? 'RouterLink' : 'div'" v-for="it in items" :key="it.label" :to="it.to" class="item" :class="{ link: !!it.to }">
       <span class="label">{{ it.label }}</span>
-      <span class="value tnum">{{ it.value }}<small v-if="it.unit"> {{ it.unit }}</small></span>
+      <span class="value tnum">{{ it.value }}<small v-if="it.unit">&nbsp;{{ it.unit }}</small></span>
       <span class="foot">
         <DeltaBadge v-if="it.delta !== undefined" :delta="it.delta" :lower-is-better="it.lower" :vs="vs" />
         <span v-if="it.hint" class="muted small hint">{{ it.hint }}</span>

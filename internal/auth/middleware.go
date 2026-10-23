@@ -33,7 +33,7 @@ func APIKeyFrom(ctx context.Context) (APIKey, bool) {
 	return k, ok
 }
 
-// SessionCookie is the session cookie for token (AUTH-1).
+// SessionCookie is the session cookie for token.
 func (s *Service) SessionCookie(token string, secure bool) http.Cookie {
 	return http.Cookie{
 		Name:     SessionCookie,
@@ -60,17 +60,23 @@ func SessionToken(r *http.Request) string {
 	return c.Value
 }
 
-// AuthenticateKey resolves a bearer token to an active key. An IP that sends 20 invalid keys
-// within 15 minutes gets ErrRateLimited until the window passes.
+// AuthenticateKey resolves a bearer token to an active key. A valid key always works. Invalid
+// ones get ErrRateLimited after 20 within 15 minutes: per client IP for tokens that match no key
+// (guessing), per key for revoked keys and keys of suspended users. So one stale key cannot lock
+// out the other keys used from the same IP, e.g. a server that calls Ritm for many users.
 func (s *Service) AuthenticateKey(ctx context.Context, ip, token string) (APIKey, error) {
-	if !s.keyLimiter.Allow(ip) {
+	k, err := s.VerifyKey(ctx, token)
+	if !errors.Is(err, ErrInvalidKey) {
+		return k, err
+	}
+	limiter, key := s.keyLimiter, ip
+	if errors.Is(err, errKnownKey) {
+		limiter, key = s.staleKeyLimit, string(hashToken(token))
+	}
+	if !limiter.Take(key) {
 		return APIKey{}, ErrRateLimited
 	}
-	k, err := s.VerifyKey(ctx, token)
-	if errors.Is(err, ErrInvalidKey) {
-		s.keyLimiter.Fail(ip)
-	}
-	return k, err
+	return APIKey{}, ErrInvalidKey
 }
 
 // WithAPIKey returns ctx carrying the authenticated key (see APIKeyFrom).
@@ -84,7 +90,7 @@ func WithUser(ctx context.Context, u User) context.Context {
 }
 
 // RequireKey authenticates "Authorization: Bearer <key>" and checks the scope:
-// missing/invalid key → 401, other scope → 403 (MON-4). Used for /mcp; REST operations declare
+// missing/invalid key → 401, other scope → 403. Used for /mcp; REST operations declare
 // their scopes in internal/api.
 func (s *Service) RequireKey(scope string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +136,7 @@ func BearerToken(r *http.Request) (string, bool) {
 var ErrCSRF = errors.New("missing CSRF header or cross-origin request")
 
 // CheckCSRF requires the X-Ritm-CSRF header on state-changing requests and, when an Origin header
-// is present, that it matches the request host or the configured base URL (AUTH-3).
+// is present, that it matches the request host or the configured base URL.
 func CheckCSRF(r *http.Request, baseURL string) error {
 	switch r.Method {
 	case http.MethodGet, http.MethodHead, http.MethodOptions:

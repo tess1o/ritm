@@ -14,7 +14,7 @@ import (
 // ErrBusy is returned when the user already has an import uploading, queued or running.
 var ErrBusy = errors.New("an import is already running")
 
-// Progress is a live snapshot of an import, streamed over SSE (PRG-1).
+// Progress is a live snapshot of an import, streamed over SSE.
 type Progress struct {
 	ID       string       `json:"id"`
 	Status   string       `json:"status" enum:"queued,running,succeeded,failed"`
@@ -26,7 +26,7 @@ type Progress struct {
 	Error    string       `json:"error,omitempty"`
 }
 
-// Manager runs one user's background work: at most one import at a time (ING-2) and recomputes
+// Manager runs one user's background work: at most one import at a time and recomputes
 // started by requests, which Shutdown cancels and waits for. Managers of different users share
 // slots, which caps concurrent imports server-wide; an upload waits for a slot as "queued".
 type Manager struct {
@@ -61,7 +61,7 @@ func (m *Manager) now() time.Time {
 	return o.now()
 }
 
-// Recover marks interrupted imports failed and removes leftover temp files (ING-3).
+// Recover marks interrupted imports failed and removes leftover temp files.
 func (m *Manager) Recover(ctx context.Context) error {
 	n, err := RecoverInterrupted(ctx, m.db, m.now())
 	if err != nil {
@@ -279,7 +279,7 @@ func (m *Manager) Run(fn func(ctx context.Context) error) error {
 	return fn(m.ctx)
 }
 
-// Shutdown cancels a running import (it is marked failed, NFR-7) and other background work, and
+// Shutdown cancels a running import (it is marked failed) and other background work, and
 // waits for them to stop.
 func (m *Manager) Shutdown(ctx context.Context) {
 	m.mu.Lock()

@@ -1,4 +1,4 @@
-// Package monitor turns a user's data freshness into the report polled by Uptime Kuma (§13).
+// Package monitor turns a user's data freshness into the report polled by Uptime Kuma.
 // Ritm sends no notifications itself: the HTTP status tells Kuma whether to alert.
 package monitor
 
@@ -19,8 +19,8 @@ const (
 	StatusError  = "error"
 )
 
-// FreshnessReport is the body of GET /api/v1/monitor/freshness (MON-7). It holds only dates and counts,
-// never health values (MON-10).
+// FreshnessReport is the body of GET /api/v1/monitor/freshness. It holds only dates and counts,
+// never health values.
 type FreshnessReport struct {
 	Status         string   `json:"status" enum:"ok,stale,no_data,error"`
 	Message        string   `json:"message"`
@@ -31,7 +31,7 @@ type FreshnessReport struct {
 	CheckedAt      string   `json:"checked_at"`
 }
 
-// HTTPStatus maps the report to the status code Kuma checks (MON-6): 2xx only for fresh data.
+// HTTPStatus maps the report to the status code Kuma checks: 2xx only for fresh data.
 func (r FreshnessReport) HTTPStatus() int {
 	switch r.Status {
 	case StatusOK:
@@ -43,7 +43,7 @@ func (r FreshnessReport) HTTPStatus() int {
 	}
 }
 
-// Evaluate reports data as stale when now − lastData ≥ staleAfter (MON-2). Times are rendered
+// Evaluate reports data as stale when now − lastData ≥ staleAfter. Times are rendered
 // in loc with their offset.
 func Evaluate(lastData, lastImport *time.Time, staleAfter time.Duration, now time.Time, loc *time.Location) FreshnessReport {
 	r := FreshnessReport{
@@ -73,7 +73,7 @@ func Failed(staleAfter time.Duration, now time.Time, loc *time.Location) Freshne
 		StaleAfterDays: mathx.Round(staleAfter.Hours()/24, 2), CheckedAt: now.In(loc).Truncate(time.Second).Format(time.RFC3339)}
 }
 
-// ParseMaxAge parses the max_age query parameter (MON-5), e.g. "10d", "72h" or "1d12h".
+// ParseMaxAge parses the max_age query parameter, e.g. "10d", "72h" or "1d12h".
 func ParseMaxAge(s string) (time.Duration, error) {
 	d, err := config.ParseDuration(s)
 	if err != nil || d <= 0 {

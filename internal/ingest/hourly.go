@@ -3,7 +3,7 @@ package ingest
 import "ritm/internal/days"
 
 // splitHours attributes a cumulative sample to local hour buckets using the sample's own offset,
-// splitting proportionally to overlap when it spans several hours (AGG-1).
+// splitting proportionally to overlap when it spans several hours.
 func splitHours(startMS, endMS int64, offMin int, value float64, fn func(hourStartMS int64, day string, hour int, v float64)) {
 	off := int64(offMin) * 60_000
 	ls, le := startMS+off, endMS+off

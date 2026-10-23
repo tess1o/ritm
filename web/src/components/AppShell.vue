@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // App chrome: grouped sidebar (desktop) or bottom tab bar (phone), plus a shared top bar with the
-// page title, per-page actions (teleported into #topbar-actions) and the date presets (UI-M2).
+// page title, per-page actions (teleported into #topbar-actions) and the date presets.
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Icon from './Icon.vue'

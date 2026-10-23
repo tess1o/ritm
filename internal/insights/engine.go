@@ -15,7 +15,7 @@ import (
 	"ritm/internal/store"
 )
 
-// Period kinds (§8.2). Monthly and long-term windows are aligned 28- and 91-day blocks counted
+// Period kinds. Monthly and long-term windows are aligned 28- and 91-day blocks counted
 // from Monday 1970-01-05, so re-running the engine on later days yields the same periods.
 const (
 	Daily    = "daily"
@@ -121,7 +121,7 @@ func NewEngine(db *store.DB, zone *days.Zone, clk clock.Clock) *Engine {
 }
 
 // Generate evaluates all rules for the latest periods plus a short history and stores the result,
-// replacing previously generated insights for the same periods (INS-5).
+// replacing previously generated insights for the same periods.
 func (e *Engine) Generate(ctx context.Context, _ days.Day, res *derive.Resolved) error {
 	today := e.zone.Today(e.clock.Now())
 	data, err := Load(ctx, e.db.W, res.MainType, -1, today)
@@ -181,7 +181,7 @@ func (e *Engine) Generate(ctx context.Context, _ days.Day, res *derive.Resolved)
 				return err
 			}
 		}
-		return nil
+		return store.BumpDataVersion(ctx, tx)
 	})
 }
 

@@ -12,7 +12,7 @@ import (
 )
 
 type monitorInput struct {
-	MaxAge string `query:"max_age" example:"10d" doc:"Override the stale threshold for this request (MON-5), e.g. 10d, 72h or 1d12h"`
+	MaxAge string `query:"max_age" example:"10d" doc:"Override the stale threshold for this request, e.g. 10d, 72h or 1d12h"`
 }
 
 type monitorOutput struct {
@@ -24,7 +24,7 @@ func (s *Server) registerMonitor() {
 	op := huma.Operation{OperationID: "getMonitorFreshness", Method: http.MethodGet, Path: "/monitor/freshness", Tags: []string{"Monitoring"},
 		Summary: "Data freshness for Uptime Kuma",
 		Description: "200 `ok` while data is fresh; 503 `stale` once no new Apple Health data arrived for the threshold (Settings, RITM_STALE_AFTER " +
-			"or `max_age`), 503 `no_data` before the first import, 500 `error` when the database is unavailable (§13). The body has only dates and counts (MON-10).",
+			"or `max_age`), 503 `no_data` before the first import, 500 `error` when the database is unavailable. The body has only dates and counts.",
 		Responses: map[string]*huma.Response{
 			"503": {Description: "Stale or no data", Content: map[string]*huma.MediaType{"application/json": {Schema: &huma.Schema{Ref: "#/components/schemas/FreshnessReport"}}}},
 		},

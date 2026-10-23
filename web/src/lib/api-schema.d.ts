@@ -20,7 +20,7 @@ export interface paths {
         post?: never;
         /**
          * Delete the account
-         * @description Deletes the user, their sessions, API keys and data (AUTH-5).
+         * @description Deletes the user, their sessions, API keys and data.
          */
         delete: operations["deleteAccount"];
         options?: never;
@@ -38,7 +38,7 @@ export interface paths {
         get?: never;
         /**
          * Change password
-         * @description Requires the current password; the user's other sessions end (AUTH-5).
+         * @description Requires the current password; the user's other sessions end.
          */
         put: operations["changePassword"];
         post?: never;
@@ -59,7 +59,7 @@ export interface paths {
         put?: never;
         /**
          * Delete all health data
-         * @description Replaces the user's database with an empty one: imports, samples, workouts, insights, notes and settings go; the account and API keys stay (AUTH-5).
+         * @description Replaces the user's database with an empty one: imports, samples, workouts, insights, notes and settings go; the account and API keys stay.
          */
         post: operations["resetAccountData"];
         delete?: never;
@@ -77,7 +77,9 @@ export interface paths {
         };
         /**
          * Daily activity
-         * @description Per day (default the last 30 days): steps, distance, calories, flights, exercise and stand, rings, sedentary stretch (§7.2).
+         * @description Per day (default the last 30 days): steps, distance, calories, flights, exercise and stand, rings, sedentary stretch.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listDailyActivity"];
         put?: never;
@@ -97,13 +99,13 @@ export interface paths {
         };
         /**
          * List API keys
-         * @description All keys of the user, newest first, including revoked ones (KEY-3).
+         * @description All keys of the user, newest first, including revoked ones.
          */
         get: operations["listApiKeys"];
         put?: never;
         /**
          * Create an API key
-         * @description Keys are `ritm_` + 32 random bytes; only a hash is stored, so the secret is returned once (KEY-1).
+         * @description Keys are `ritm_` + 32 random bytes; only a hash is stored, so the secret is returned once.
          */
         post: operations["createApiKey"];
         delete?: never;
@@ -124,7 +126,7 @@ export interface paths {
         post?: never;
         /**
          * Revoke an API key
-         * @description Takes effect immediately (KEY-3).
+         * @description Takes effect immediately.
          */
         delete: operations["revokeApiKey"];
         options?: never;
@@ -163,7 +165,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in
-         * @description Starts a browser session (cookie `ritm_session`). 10 failures per IP or username in 15 minutes lock sign-in for that window (AUTH-2).
+         * @description Starts a browser session (cookie `ritm_session`). 10 failures per IP or username in 15 minutes lock sign-in for that window.
          */
         post: operations["login"];
         delete?: never;
@@ -203,7 +205,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account
-         * @description Creates an account and signs it in. Only when RITM_REGISTRATION_ENABLED is set, otherwise 404 (AUTH-4). Username: 3–32 of `a-z 0-9 . _ -`; password: 8–72 bytes.
+         * @description Creates an account and signs it in. Only when RITM_REGISTRATION_ENABLED is set, otherwise 404. Username: 3–32 of `a-z 0-9 . _ -`; password: 8–72 bytes.
          */
         post: operations["register"];
         delete?: never;
@@ -222,6 +224,8 @@ export interface paths {
         /**
          * Days with data
          * @description Which days have daily activity or workouts (default the last 366 days), plus the first and last day with data.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getCalendar"];
         put?: never;
@@ -242,6 +246,8 @@ export interface paths {
         /**
          * Data coverage
          * @description Date range and row count per data type, data sources and database size.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getCoverage"];
         put?: never;
@@ -262,6 +268,8 @@ export interface paths {
         /**
          * One day in detail
          * @description 24-hour timeline: daily activity with hourly steps, heart summary and HR curve, stood hours, workouts, sleep and its stages.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getDay"];
         put?: never;
@@ -281,7 +289,9 @@ export interface paths {
         };
         /**
          * Data freshness
-         * @description When data last arrived and whether it is stale (same logic as the monitor endpoint, MON-12).
+         * @description When data last arrived and whether it is stale (same logic as the monitor endpoint).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getFreshness"];
         put?: never;
@@ -301,7 +311,9 @@ export interface paths {
         };
         /**
          * Daily heart metrics
-         * @description Per day (default the last 90 days): HR range, resting and walking HR, HRV, VO2max, SpO2, respiration, wrist temperature (§7.3).
+         * @description Per day (default the last 90 days): HR range, resting and walking HR, HRV, VO2max, SpO2, respiration, wrist temperature.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listDailyHeart"];
         put?: never;
@@ -322,6 +334,8 @@ export interface paths {
         /**
          * Heart notifications
          * @description High / low heart rate and irregular rhythm notifications, newest first (default the last 365 days).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listHeartEvents"];
         put?: never;
@@ -341,7 +355,7 @@ export interface paths {
         };
         /**
          * Import history
-         * @description The 50 most recent imports with their summaries (PRG-2), newest first.
+         * @description The 50 most recent imports with their summaries, newest first.
          */
         get: operations["listImports"];
         put?: never;
@@ -367,7 +381,7 @@ export interface paths {
         };
         /**
          * Import status
-         * @description Status and summary of one import, with live progress while it runs (polling fallback of PRG-1).
+         * @description Status and summary of one import, with live progress while it runs (a polling fallback for the progress stream).
          *
          *     API keys with scope `ingest` may call this operation.
          */
@@ -389,7 +403,7 @@ export interface paths {
         };
         /**
          * Import progress stream
-         * @description Server-sent events (PRG-1): `progress` while the import runs, then one `done` with the final import. For an import that is not running, `done` (or `error`) is sent at once. Comments keep the connection alive every 15 s.
+         * @description Server-sent events: `progress` while the import runs, then one `done` with the final import. For an import that is not running, `done` (or `error`) is sent at once. Comments keep the connection alive every 15 s.
          *
          *     API keys with scope `ingest` may call this operation.
          */
@@ -411,7 +425,9 @@ export interface paths {
         };
         /**
          * Insights
-         * @description Rule-based insights (§8), most recent periods first, attention before positive. Without a range, all stored periods.
+         * @description Rule-based insights, most recent periods first, attention before positive. Without a range, all stored periods.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listInsights"];
         put?: never;
@@ -451,7 +467,7 @@ export interface paths {
         };
         /**
          * Data freshness for Uptime Kuma
-         * @description 200 `ok` while data is fresh; 503 `stale` once no new Apple Health data arrived for the threshold (Settings, RITM_STALE_AFTER or `max_age`), 503 `no_data` before the first import, 500 `error` when the database is unavailable (§13). The body has only dates and counts (MON-10).
+         * @description 200 `ok` while data is fresh; 503 `stale` once no new Apple Health data arrived for the threshold (Settings, RITM_STALE_AFTER or `max_age`), 503 `no_data` before the first import, 500 `error` when the database is unavailable. The body has only dates and counts.
          *
          *     API keys with scope `monitor` may call this operation.
          */
@@ -474,6 +490,8 @@ export interface paths {
         /**
          * Period overview
          * @description Activity, heart, sleep and training averages for a period (default the last 7 days) with deltas vs a baseline (the 28 days before for periods up to 28 days, else the preceding equal period), latest insights, scores and freshness.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getOverview"];
         put?: never;
@@ -493,12 +511,12 @@ export interface paths {
         };
         /**
          * Settings
-         * @description Goals, HR zones, load model, source priority, waking hours and other settings (§7.7).
+         * @description Goals, HR zones, load model, source priority, waking hours and other settings.
          */
         get: operations["getSettings"];
         /**
          * Replace settings
-         * @description Replaces all settings. When a setting that feeds derived data changes, derived tables and insights are recomputed before the response (§7.7).
+         * @description Replaces all settings. When a setting that feeds derived data changes, derived tables and insights are recomputed before the response.
          */
         put: operations["putSettings"];
         post?: never;
@@ -517,7 +535,9 @@ export interface paths {
         };
         /**
          * Nightly sleep
-         * @description One row per night, keyed by the wake-up day (default the last 30 days, §7.4).
+         * @description One row per night, keyed by the wake-up day (default the last 30 days).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listSleepNights"];
         put?: never;
@@ -537,7 +557,9 @@ export interface paths {
         };
         /**
          * Next-day recovery
-         * @description Mean resting HR and HRV on mornings after training days vs after rest days (default the last 30 days, UC6).
+         * @description Mean resting HR and HRV on mornings after training days vs after rest days (default the last 30 days).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getSleepRecovery"];
         put?: never;
@@ -557,7 +579,9 @@ export interface paths {
         };
         /**
          * Training load
-         * @description Daily load with fitness (CTL), fatigue (ATL), form (TSB) and ACWR (default the last 91 days, §7.6).
+         * @description Daily load with fitness (CTL), fatigue (ATL), form (TSB) and ACWR (default the last 91 days).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getTrainingLoad"];
         put?: never;
@@ -578,6 +602,8 @@ export interface paths {
         /**
          * Training consistency
          * @description Main-type sessions per ISO week vs the target, streaks, zones per week, session HR, monthly volume and totals (default the last 91 days).
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getTrainingWeekly"];
         put?: never;
@@ -598,6 +624,8 @@ export interface paths {
         /**
          * Workout types
          * @description Activity types present in the data with their counts, most frequent first.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listWorkoutTypes"];
         put?: never;
@@ -617,9 +645,33 @@ export interface paths {
         };
         /**
          * Workouts
-         * @description Workouts with key metrics, newest first (default the last 90 days).
+         * @description Workouts with key metrics and route location, newest first (default the last 90 days). Select by local days (period/from/to) or an exact window (start/end), and filter by type, category, or where the route is (near or bbox). Long lists come in pages: pass next_cursor as cursor.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["listWorkouts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workouts/routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * GPS tracks of many workouts
+         * @description Downsampled tracks of the workouts with a GPS route, newest first, as compact [lat, lon, t_ms] arrays (for drawing many routes on a map). Takes the same filters as the workout list. For pace and elevation use the single-workout route.
+         *
+         *     API keys with scope `read` may call this operation.
+         */
+        get: operations["listWorkoutRoutes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -637,7 +689,9 @@ export interface paths {
         };
         /**
          * Workout detail
-         * @description Metrics, time in HR zones, events and pauses, Apple statistics, RPE and notes, and the previous workout of the same type (§7.5).
+         * @description Metrics, time in HR zones, events and pauses, Apple statistics, RPE and notes, and the previous workout of the same type.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getWorkout"];
         put?: never;
@@ -678,6 +732,8 @@ export interface paths {
         /**
          * Workout heart rate
          * @description The HR curve from the start to 2 minutes after the end, bucketed to about `points` points.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getWorkoutHeartRate"];
         put?: never;
@@ -697,7 +753,9 @@ export interface paths {
         };
         /**
          * Workout GPS route
-         * @description The downsampled GPS track with pace, distance, climb and bounds (PAR-9). 404 when the workout has no route.
+         * @description The downsampled GPS track with pace, distance, climb and bounds. 404 when the workout has no route.
+         *
+         *     API keys with scope `read` may call this operation.
          */
         get: operations["getWorkoutRoute"];
         put?: never;
@@ -717,7 +775,7 @@ export interface paths {
         };
         /**
          * Liveness probe
-         * @description 200 when the server is up and the accounts database answers, 503 otherwise. No authentication (MON-11).
+         * @description 200 when the server is up and the accounts database answers, 503 otherwise. No authentication.
          */
         get: operations["health"];
         put?: never;
@@ -744,7 +802,7 @@ export interface components {
             /** Format: date-time */
             revoked_at: string | null;
             /** @enum {string} */
-            scope: "mcp" | "monitor" | "ingest";
+            scope: "read" | "monitor" | "ingest";
         };
         Account: {
             /**
@@ -781,6 +839,8 @@ export interface components {
             route: boolean;
             /** Format: double */
             steps: number | null;
+            /** @description The Watch recorded the day; without it, steps come from the phone alone */
+            watch: boolean;
             /**
              * Format: int64
              * @description Workouts that started that local day
@@ -988,6 +1048,11 @@ export interface components {
         FreshnessSummary: {
             /** Format: double */
             age_days: number | null;
+            /**
+             * Format: int64
+             * @description Goes up with every change to the data (imports, recomputes, settings, RPE and notes); a client can compare it to tell whether its cache is current
+             */
+            data_version: number;
             /** @description Any night of sleep is stored (the Sleep page is shown) */
             has_sleep_data: boolean;
             /** Format: date-time */
@@ -999,6 +1064,16 @@ export interface components {
             stale: boolean;
             /** Format: double */
             stale_after_hours: number;
+            /**
+             * Format: date-time
+             * @description Start of the first workout; null without workouts
+             */
+            workouts_first_at: string | null;
+            /**
+             * Format: date-time
+             * @description End of the last workout; null without workouts
+             */
+            workouts_last_at: string | null;
         };
         Goals: {
             /** Format: double */
@@ -1153,6 +1228,12 @@ export interface components {
         ItemsWorkoutType: {
             items: components["schemas"]["WorkoutType"][];
         };
+        LatLon: {
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lon: number;
+        };
         LoadDay: {
             /** Format: double */
             acwr: number | null;
@@ -1173,7 +1254,7 @@ export interface components {
             base_url: string;
             catalog: components["schemas"]["Catalog"];
             /**
-             * @description Path of the MCP endpoint (streamable HTTP, Bearer key with scope mcp)
+             * @description Path of the MCP endpoint (streamable HTTP, Bearer key with scope read)
              * @example /mcp
              */
             path: string;
@@ -1189,10 +1270,10 @@ export interface components {
             /** @example iPhone Shortcut */
             name: string;
             /**
-             * @description ingest: upload exports and read their status; monitor: data freshness (Uptime Kuma); mcp: the MCP server
+             * @description read: health data over the REST API and the MCP server; ingest: upload exports and read their status; monitor: data freshness (Uptime Kuma)
              * @enum {string}
              */
-            scope: "ingest" | "monitor" | "mcp";
+            scope: "read" | "ingest" | "monitor";
         };
         Overview: {
             active_kcal_per_day: components["schemas"]["Stat"];
@@ -1379,6 +1460,17 @@ export interface components {
             start_ms: number;
             track: components["schemas"]["RoutePoint"][];
         };
+        RouteBatch: {
+            /** Format: date */
+            from: string;
+            items: components["schemas"]["RouteTrack"][];
+            /** @description Pass as cursor for the next page; null on the last page */
+            next_cursor: string | null;
+            /** Format: date */
+            to: string;
+            /** @description More workouts with a route match; fetch them with next_cursor */
+            truncated: boolean;
+        };
         RouteBounds: {
             /** Format: double */
             max_lat: number;
@@ -1388,6 +1480,16 @@ export interface components {
             min_lat: number;
             /** Format: double */
             min_lon: number;
+        };
+        RouteLocation: {
+            bounds: components["schemas"]["RouteBounds"];
+            end: components["schemas"]["LatLon"];
+            /**
+             * Format: int64
+             * @description Number of recorded track points
+             */
+            points: number;
+            start: components["schemas"]["LatLon"];
         };
         RoutePoint: {
             /** Format: double */
@@ -1400,6 +1502,15 @@ export interface components {
             pace_s_per_km: number | null;
             /** Format: int64 */
             t_ms: number;
+        };
+        RouteTrack: {
+            bounds: components["schemas"]["RouteBounds"];
+            /** @description The workout's stable key (see the workout list) */
+            key: string;
+            /** @description Downsampled points as [lat, lon, t_ms] (t_ms: UTC epoch milliseconds) */
+            track: number[][];
+            /** Format: int64 */
+            workout_id: number;
         };
         SRPEScale: {
             /** Format: double */
@@ -1627,7 +1738,14 @@ export interface components {
             activity_type: string;
             /** Format: double */
             avg_hr_bpm: number | null;
+            /**
+             * @description Normalised kind of activity
+             * @enum {string}
+             */
+            category: "walk" | "run" | "hike" | "cycle" | "swim" | "row" | "paddle" | "sail" | "ski" | "strength" | "cardio" | "other";
             day: string;
+            /** @description The activity covers a distance (it may have a GPS route) */
+            distance_based: boolean;
             /** Format: double */
             distance_m: number | null;
             /** Format: double */
@@ -1640,12 +1758,20 @@ export interface components {
             has_route: boolean;
             /** Format: double */
             hrr60_bpm: number | null;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Row id; restarts after a data reset (use key to refer to a workout over time)
+             */
             id: number;
             /** Format: int64 */
             indoor: number | null;
             /** Format: double */
             kcal_per_min: number | null;
+            /**
+             * @description Stable identity: activity_type|start_ms|end_ms. It survives re-imports and data resets; RPE and notes are stored under it
+             * @example HKWorkoutActivityTypeRunning|1760000000000|1760003600000
+             */
+            key: string;
             /** Format: double */
             load: number | null;
             load_model: string;
@@ -1667,6 +1793,8 @@ export interface components {
             pct_z3_plus: number | null;
             /** Format: int64 */
             previous_same_type_id: number | null;
+            /** @description Where the GPS route starts and ends and the area it covers; null without a route */
+            route: components["schemas"]["RouteLocation"];
             /** Format: int64 */
             rpe: number | null;
             source: string;
@@ -1696,19 +1824,34 @@ export interface components {
             type: string;
         };
         WorkoutList: {
-            /** Format: date */
+            /**
+             * Format: date
+             * @description First local day of the range
+             */
             from: string;
             items: components["schemas"]["WorkoutSummary"][];
-            /** Format: date */
+            /** @description Pass as cursor for the next page; null on the last page */
+            next_cursor: string | null;
+            /**
+             * Format: date
+             * @description Last local day of the range
+             */
             to: string;
-            /** @description More workouts match; raise limit or narrow the range */
+            /** @description More workouts match; fetch them with next_cursor */
             truncated: boolean;
         };
         WorkoutSummary: {
             activity_type: string;
             /** Format: double */
             avg_hr_bpm: number | null;
+            /**
+             * @description Normalised kind of activity
+             * @enum {string}
+             */
+            category: "walk" | "run" | "hike" | "cycle" | "swim" | "row" | "paddle" | "sail" | "ski" | "strength" | "cardio" | "other";
             day: string;
+            /** @description The activity covers a distance (it may have a GPS route) */
+            distance_based: boolean;
             /** Format: double */
             distance_m: number | null;
             /** Format: double */
@@ -1720,12 +1863,20 @@ export interface components {
             has_route: boolean;
             /** Format: double */
             hrr60_bpm: number | null;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Row id; restarts after a data reset (use key to refer to a workout over time)
+             */
             id: number;
             /** Format: int64 */
             indoor: number | null;
             /** Format: double */
             kcal_per_min: number | null;
+            /**
+             * @description Stable identity: activity_type|start_ms|end_ms. It survives re-imports and data resets; RPE and notes are stored under it
+             * @example HKWorkoutActivityTypeRunning|1760000000000|1760003600000
+             */
+            key: string;
             /** Format: double */
             load: number | null;
             /** Format: double */
@@ -1738,6 +1889,8 @@ export interface components {
             pace_s_per_km: number | null;
             /** Format: double */
             pct_z3_plus: number | null;
+            /** @description Where the GPS route starts and ends and the area it covers; null without a route */
+            route: components["schemas"]["RouteLocation"];
             /** Format: int64 */
             rpe: number | null;
             source: string;
@@ -1809,6 +1962,7 @@ export type ItemsApiKey = components['schemas']['ItemsAPIKey'];
 export type ItemsHrPoint = components['schemas']['ItemsHRPoint'];
 export type ItemsImportRow = components['schemas']['ItemsImportRow'];
 export type ItemsWorkoutType = components['schemas']['ItemsWorkoutType'];
+export type LatLon = components['schemas']['LatLon'];
 export type LoadDay = components['schemas']['LoadDay'];
 export type McpInfo = components['schemas']['McpInfo'];
 export type MonthVolume = components['schemas']['MonthVolume'];
@@ -1826,8 +1980,11 @@ export type RecoveryReport = components['schemas']['RecoveryReport'];
 export type Resolved = components['schemas']['Resolved'];
 export type Rings = components['schemas']['Rings'];
 export type Route = components['schemas']['Route'];
+export type RouteBatch = components['schemas']['RouteBatch'];
 export type RouteBounds = components['schemas']['RouteBounds'];
+export type RouteLocation = components['schemas']['RouteLocation'];
 export type RoutePoint = components['schemas']['RoutePoint'];
+export type RouteTrack = components['schemas']['RouteTrack'];
 export type SrpeScale = components['schemas']['SRPEScale'];
 export type Score = components['schemas']['Score'];
 export type Scores = components['schemas']['Scores'];
@@ -2547,6 +2704,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ErrorModel"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -3025,7 +3191,7 @@ export interface operations {
     createImport: {
         parameters: {
             query?: {
-                /** @description Full re-import: ignore what was imported before (DUP-3) */
+                /** @description Full re-import: ignore what was imported before */
                 full?: boolean;
             };
             header?: {
@@ -3412,7 +3578,7 @@ export interface operations {
     getMonitorFreshness: {
         parameters: {
             query?: {
-                /** @description Override the stale threshold for this request (MON-5), e.g. 10d, 72h or 1d12h */
+                /** @description Override the stale threshold for this request, e.g. 10d, 72h or 1d12h */
                 max_age?: string;
             };
             header?: never;
@@ -4027,8 +4193,22 @@ export interface operations {
                 from?: string;
                 /** @description Last day (YYYY-MM-DD, or a period name meaning its last day; default today) */
                 to?: string;
+                /** @description With end: workouts that overlap this exact window (RFC 3339) instead of local days. Not combined with period/from/to */
+                start?: string;
+                /** @description End of the window (exclusive) */
+                end?: string;
                 /** @description Only this HealthKit workout type */
                 type?: string;
+                /** @description Only this kind of activity */
+                category?: "walk" | "run" | "hike" | "cycle" | "swim" | "row" | "paddle" | "sail" | "ski" | "strength" | "cardio" | "other";
+                /** @description lat,lon: only workouts whose GPS route starts within radius_m of this point */
+                near?: string;
+                /** @description Radius for near, in metres */
+                radius_m?: number;
+                /** @description minLon,minLat,maxLon,maxLat: only workouts whose GPS route bounds intersect this box (minLon > maxLon crosses the antimeridian). Not combined with near */
+                bbox?: string;
+                /** @description next_cursor of the previous page */
+                cursor?: string;
                 limit?: number;
             };
             header?: never;
@@ -4044,6 +4224,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkoutList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    listWorkoutRoutes: {
+        parameters: {
+            query?: {
+                /** @description today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to. */
+                period?: string;
+                /** @description First day (YYYY-MM-DD, or a period name meaning its first day) */
+                from?: string;
+                /** @description Last day (YYYY-MM-DD, or a period name meaning its last day; default today) */
+                to?: string;
+                /** @description With end: workouts that overlap this exact window (RFC 3339) instead of local days. Not combined with period/from/to */
+                start?: string;
+                /** @description End of the window (exclusive) */
+                end?: string;
+                /** @description Only this HealthKit workout type */
+                type?: string;
+                /** @description Only this kind of activity */
+                category?: "walk" | "run" | "hike" | "cycle" | "swim" | "row" | "paddle" | "sail" | "ski" | "strength" | "cardio" | "other";
+                /** @description lat,lon: only workouts whose GPS route starts within radius_m of this point */
+                near?: string;
+                /** @description Radius for near, in metres */
+                radius_m?: number;
+                /** @description minLon,minLat,maxLon,maxLat: only workouts whose GPS route bounds intersect this box (minLon > maxLon crosses the antimeridian). Not combined with near */
+                bbox?: string;
+                /** @description next_cursor of the previous page */
+                cursor?: string;
+                /** @description Approximate number of points per track */
+                points?: number;
+                /** @description Tracks per page */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RouteBatch"];
                 };
             };
             /** @description Bad Request */

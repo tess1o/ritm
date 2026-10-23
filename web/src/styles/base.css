@@ -101,7 +101,7 @@ pre {
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0b1020;
+  color: var(--on-accent);
 }
 .btn.primary:hover {
   background: var(--accent-strong);
@@ -175,22 +175,6 @@ textarea.input {
   margin: 0 auto;
   width: 100%;
 }
-.page-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.grid {
-  display: grid;
-  gap: var(--gap);
-}
-.tiles {
-  display: grid;
-  gap: var(--gap);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
 .cols-2 {
   display: grid;
   gap: var(--gap);
@@ -256,17 +240,11 @@ textarea.input {
 }
 
 @media (min-width: 640px) {
-  .tiles {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
   .page {
     padding: 24px;
   }
 }
 @media (min-width: 1024px) {
-  .tiles {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
   .cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

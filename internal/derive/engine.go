@@ -49,7 +49,7 @@ func (e *Engine) Resolved(ctx context.Context, q store.Querier) (*Resolved, erro
 const pendingKey = "derive.pending_from"
 
 // AfterImport recomputes from the import's earliest affected day ("" = nothing new), or from an
-// earlier day left pending by a failed recompute (§6.8).
+// earlier day left pending by a failed recompute.
 func (e *Engine) AfterImport(ctx context.Context, earliestDay string) error {
 	if earliestDay == "" {
 		var pending string
@@ -61,7 +61,7 @@ func (e *Engine) AfterImport(ctx context.Context, earliestDay string) error {
 	return e.Recompute(ctx, earliestDay)
 }
 
-// Recompute rebuilds derived data from fromDay (YYYY-MM-DD, "" = everything) to today (§6.8).
+// Recompute rebuilds derived data from fromDay (YYYY-MM-DD, "" = everything) to today.
 // The start day is recorded as pending before the work begins and cleared when it succeeds, so
 // a failed or killed recompute is repaired by the next one.
 func (e *Engine) Recompute(ctx context.Context, fromDay string) error {
@@ -150,7 +150,10 @@ func (e *Engine) recompute(ctx context.Context, fromDay string) error {
 		if err := e.computeWorkouts(ctx, tx, from, res); err != nil {
 			return fmt.Errorf("workouts: %w", err)
 		}
-		return e.computeLoad(ctx, tx, res, to)
+		if err := e.computeLoad(ctx, tx, res, to); err != nil {
+			return err
+		}
+		return store.BumpDataVersion(ctx, tx)
 	})
 	if err != nil {
 		return err

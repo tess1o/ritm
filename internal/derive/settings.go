@@ -1,4 +1,4 @@
-// Package derive computes the derived daily tables, workout metrics and training load (§7).
+// Package derive computes the derived daily tables, workout metrics and training load.
 package derive
 
 import (
@@ -25,7 +25,7 @@ type Goals struct {
 	UseRingGoals bool `json:"use_ring_goals"`
 }
 
-// Settings are the user-editable settings (§7.7). Nil pointers mean "derive automatically".
+// Settings are the user-editable settings. Nil pointers mean "derive automatically".
 type Settings struct {
 	MaxHR           *float64   `json:"max_hr"`
 	RestingHR       *float64   `json:"resting_hr"`
@@ -190,7 +190,7 @@ func Resolve(ctx context.Context, q store.Querier, s Settings, now time.Time) (*
 		return nil, err
 	}
 
-	// Ring goals (§7.7): the stand and exercise goals of the latest day that has them. Resolved
+	// Ring goals: the stand and exercise goals of the latest day that has them. Resolved
 	// carries the effective goals; the stored settings keep the user's own values.
 	r.GoalsSource = "settings"
 	if s.Goals.UseRingGoals {
@@ -289,7 +289,7 @@ func medianRestingHR(ctx context.Context, q store.Querier, now time.Time) (float
 }
 
 // sourcePriority returns all known sources in priority order: the configured list first, then
-// the remaining sources ordered Watch → iPhone → other, most recently seen first (SRC-1).
+// the remaining sources ordered Watch → iPhone → other, most recently seen first.
 func sourcePriority(ctx context.Context, q store.Querier, configured []string) ([]Source, error) {
 	rows, err := q.QueryContext(ctx, `SELECT name, kind FROM sources
 		ORDER BY CASE kind WHEN 'watch' THEN 0 WHEN 'phone' THEN 1 ELSE 2 END, last_seen_ms DESC, name`)

@@ -1,4 +1,4 @@
-// Package api implements Ritm's versioned REST API (/api/v1, §11) with Huma, which also
+// Package api implements Ritm's versioned REST API (/api/v1) with Huma, which also
 // generates its OpenAPI description, and serves the embedded SPA.
 package api
 
@@ -57,7 +57,7 @@ func init() {
 // New returns the HTTP handler for the server: REST API, MCP, SPA.
 func New(d Deps) http.Handler {
 	s := newServer(d)
-	return s.recoverer(s.logger(s.mux))
+	return s.recoverer(s.logger(compress(s.mux)))
 }
 
 // OpenAPI returns the API description without opening any database (`ritm openapi`).
@@ -69,7 +69,7 @@ func newServer(d Deps) *Server {
 	s := &Server{Deps: d, mux: http.NewServeMux(),
 		mcp: mcpserver.New(mcpserver.Deps{Cfg: d.Cfg, Tenants: d.Tenants, Log: d.Log, Version: d.Version})}
 	s.api = humago.New(s.mux, apiConfig(d.Version))
-	s.api.UseMiddleware(s.authenticate)
+	s.api.UseMiddleware(s.authenticate, s.revalidate)
 	s.v1 = huma.NewGroup(s.api, BasePath)
 	s.registerMeta()
 	s.registerAuth()
@@ -81,8 +81,8 @@ func newServer(d Deps) *Server {
 	s.registerSettings()
 	s.registerMonitor()
 
-	// Not REST: the MCP transport (§10), OAuth discovery probes, unknown API paths and the SPA.
-	s.mux.Handle("/mcp", noStore(s.Auth.RequireKey(auth.ScopeMCP, s.mcp)))
+	// Not REST: the MCP transport, OAuth discovery probes, unknown API paths and the SPA.
+	s.mux.Handle("/mcp", noStore(s.Auth.RequireKey(auth.ScopeRead, s.mcp)))
 	s.mux.HandleFunc("/.well-known/", func(w http.ResponseWriter, r *http.Request) { httpx.Error(w, http.StatusNotFound, "not found") })
 	s.mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/problem+json")
@@ -105,14 +105,18 @@ sleep, workouts, training load and insights. The web app uses this API too.
 - Ranged reads take ` + "`period`" + ` (` + "`today`, `yesterday`, `last_7d`, `last_<n>d`, `this_week`, `last_week`, `this_month`,\n  `last_month`, `ytd`" + `, a day, or ` + "`FROM..TO`" + `) or ` + "`from`/`to`" + `.
 - Collections are ` + "`{\"items\": [...]}`" + `; ranged ones add ` + "`from`/`to`" + `, capped ones ` + "`truncated`" + `.
 - Errors are RFC 9457 problem details (` + "`application/problem+json`" + `).
+- Data reads send an ` + "`ETag`" + ` and ` + "`Cache-Control: private, no-cache`" + `: send it back in ` + "`If-None-Match`" + ` to get
+  ` + "`304 Not Modified`" + ` while nothing changed. ` + "`GET /freshness`" + ` has ` + "`data_version`" + `, which goes up with every change.
+- Long workout lists come in pages: pass ` + "`next_cursor`" + ` as ` + "`cursor`" + `.
 
 ## Authentication
 - **Browser session**: the ` + "`ritm_session`" + ` cookie from ` + "`POST /api/v1/auth/login`" + `. State-changing
   requests must send ` + "`X-Ritm-CSRF: 1`" + `.
 - **API key**: ` + "`Authorization: Bearer ritm_…`" + `, created under Settings. A key has one scope and can call
-  only the operations listing that scope (` + "`x-ritm-scopes`" + `): ` + "`ingest`" + ` uploads exports and reads their status
-  (e.g. from an iPhone Shortcut), ` + "`monitor`" + ` reads data freshness (Uptime Kuma), ` + "`mcp`" + ` is for the MCP server at
-  ` + "`/mcp`" + ` only.`
+  only the operations listing that scope (` + "`x-ritm-scopes`" + `): ` + "`read`" + ` reads health data (scripts,
+  integrations, and the MCP server at ` + "`/mcp`" + ` for AI assistants), ` + "`ingest`" + ` uploads exports and reads their
+  status (e.g. from an iPhone Shortcut), ` + "`monitor`" + ` reads data freshness (Uptime Kuma). No key can change data
+  or settings.`
 
 func apiConfig(version string) huma.Config {
 	cfg := huma.DefaultConfig("Ritm API", version)
@@ -125,7 +129,7 @@ func apiConfig(version string) huma.Config {
 		securitySession: {Type: "apiKey", In: "cookie", Name: auth.SessionCookie,
 			Description: "Browser session from POST /api/v1/auth/login. Writes also need the header `X-Ritm-CSRF: 1`."},
 		securityKey: {Type: "http", Scheme: "bearer", BearerFormat: "ritm_…",
-			Description: "API key with a scope (`ingest`, `monitor`, `mcp`); see each operation's `x-ritm-scopes`."},
+			Description: "API key with a scope (`read`, `ingest`, `monitor`); see each operation's `x-ritm-scopes`."},
 	}
 	return cfg
 }
@@ -145,6 +149,8 @@ type access struct {
 var (
 	public      = access{}
 	sessionOnly = access{session: true}
+	// dataRead is for reads of health data: the web app, or a `read` key (scripts, integrations).
+	dataRead = sessionOrKey(auth.ScopeRead)
 )
 
 func sessionOrKey(scopes ...string) access { return access{session: true, scopes: scopes} }
@@ -316,9 +322,9 @@ const contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 
 	"img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; font-src 'self'; " +
 	"worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 
-// docsSecurityPolicy is for the API reference page, which loads Stoplight Elements from unpkg.
-const docsSecurityPolicy = "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; " +
-	"img-src 'self' data: https:; connect-src 'self'; font-src 'self' data: https://unpkg.com; frame-ancestors 'none'"
+// bodyReadTimeout bounds how long a client may take to send a request body, so slow senders
+// cannot hold connections open. The export upload streams for as long as it needs.
+const bodyReadTimeout = time.Minute
 
 func (s *Server) logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -327,10 +333,14 @@ func (s *Server) logger(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
-		if r.URL.Path == BasePath+"/docs" {
-			w.Header().Set("Content-Security-Policy", docsSecurityPolicy)
-		} else {
-			w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		// The API reference page (BasePath/docs) replaces this with Huma's own, sandboxed policy.
+		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		if s.Cfg.SecureCookies() {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
+		// Only for bodies: a read deadline that expires while a GET streams would cancel it.
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && !(r.Method == http.MethodPost && r.URL.Path == BasePath+"/imports") {
+			_ = http.NewResponseController(w).SetReadDeadline(start.Add(bodyReadTimeout))
 		}
 		next.ServeHTTP(sw, r)
 		level := slog.LevelDebug

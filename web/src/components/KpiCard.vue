@@ -19,6 +19,8 @@ const props = defineProps<{
   color: string // CSS colour value
   goal?: { current: number | null; target: number; unit?: string }
   footnote?: string
+  detail?: string // a second figure, shown after the comparison
+  to?: string // makes the card a link
 }>()
 
 const pct = computed(() => {
@@ -29,7 +31,7 @@ const pct = computed(() => {
 </script>
 
 <template>
-  <article class="kpi" :style="{ '--kpi': color }">
+  <component :is="to ? 'RouterLink' : 'article'" :to="to" class="kpi" :class="{ link: !!to }" :style="{ '--kpi': color }">
     <header>
       <span class="label">{{ label }}</span>
       <DeltaBadge v-if="delta !== undefined" :delta="delta" :lower-is-better="lowerIsBetter" :vs="vs ?? 'previous period'" />
@@ -38,13 +40,14 @@ const pct = computed(() => {
     <div class="sub small">
       <span v-if="previous" class="muted">{{ previousLabel ?? 'was' }} {{ previous }}</span>
       <span v-else-if="footnote" class="muted">{{ footnote }}</span>
+      <span v-if="detail" class="text-2">{{ previous || footnote ? ' · ' : '' }}{{ detail }}</span>
     </div>
     <Sparkline v-if="series" :values="series" :color="color" :label="`${label}: ${seriesLabel ?? 'daily trend'}`" />
     <div v-if="goal" class="goal">
       <div class="track" :aria-label="`${pct ?? 0} % of goal`"><div class="fill" :style="{ width: `${Math.min(100, pct ?? 0)}%` }" /></div>
       <span class="small text-2 tnum">{{ pct ?? '–' }} % of {{ num(goal.target) }}{{ goal.unit ? ` ${goal.unit}` : '' }} goal</span>
     </div>
-  </article>
+  </component>
 </template>
 
 <style scoped>
@@ -59,6 +62,17 @@ const pct = computed(() => {
   border-radius: var(--radius);
   position: relative;
   overflow: hidden;
+}
+.kpi.link {
+  color: inherit;
+  text-decoration: none;
+}
+.kpi.link:hover {
+  border-color: var(--border-strong);
+}
+.kpi.link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .kpi::before {
   content: '';

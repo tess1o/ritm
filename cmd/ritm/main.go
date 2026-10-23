@@ -1,4 +1,4 @@
-// Command ritm is the single-binary Ritm server and CLI (§15):
+// Command ritm is the single-binary Ritm server and CLI:
 //
 //	ritm serve                               run the HTTP server (default)
 //	ritm import --user NAME [--full] FILE    import export.zip / export.xml for a user
@@ -39,6 +39,7 @@ import (
 var version = "dev"
 
 func main() {
+	restrictFileModes()
 	cmd, args := "serve", os.Args[1:]
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		cmd, args = args[0], args[1:]
@@ -170,6 +171,10 @@ func serve() error {
 	}
 	a.log.Info("ritm listening", "addr", ln.Addr().String(), "version", version, "data_dir", a.cfg.DataDir,
 		"registration_enabled", a.cfg.RegistrationEnabled)
+	if !a.cfg.SecureCookies() {
+		a.log.Warn("RITM_BASE_URL is not an https:// URL, so the session cookie is not marked Secure; " +
+			"set it to the public URL once Ritm is served over HTTPS")
+	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Serve(ln) }()
 	select {
@@ -180,7 +185,7 @@ func serve() error {
 	a.log.Info("shutting down")
 	shutCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	// Cancel imports first (they are marked failed, NFR-7) so their progress streams end, then
+	// Cancel imports first (they are marked failed) so their progress streams end, then
 	// drain HTTP requests, and only then close the databases they use.
 	a.tenants.StopImports(shutCtx)
 	err = srv.Shutdown(shutCtx)

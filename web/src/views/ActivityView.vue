@@ -244,7 +244,7 @@ const heatOption = computed(() => {
       itemWidth: 10,
       itemHeight: 120,
       textStyle: { color: color('--muted'), fontSize: 10 },
-      inRange: { color: [color('--surface'), '#184f95', color('--s-blue'), '#9ec5f4'] },
+      inRange: { color: [color('--surface'), color('--s-blue-dark'), color('--s-blue'), color('--s-blue-light')] },
     },
     series: [{ type: 'heatmap', data, itemStyle: { borderColor: color('--bg'), borderWidth: 1 } }],
   }

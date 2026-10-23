@@ -13,7 +13,7 @@ export function tint(token: string, strength: number) {
   return `rgb(${c.map((v, i) => Math.round(s[i] + (v - s[i]) * strength)).join(',')})`
 }
 
-/** Grid with room for axis labels; tighter on phones (UI-M6). */
+/** Grid with room for axis labels; tighter on phones. */
 export function grid(extra: Record<string, unknown> = {}) {
   return { left: 8, right: 8, top: 28, bottom: 8, containLabel: true, ...extra }
 }
@@ -28,7 +28,7 @@ export function dayAxis(days: string[], extra: Record<string, unknown> = {}) {
     axisLabel: {
       interval: Math.max(0, every - 1),
       formatter: (d: string) => (n <= 8 ? weekday(d) : shortDay(d)),
-      fontSize: isPhone() ? 11 : 11,
+      fontSize: 11,
     },
     axisTick: { show: false },
     ...extra,

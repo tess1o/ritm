@@ -11,7 +11,7 @@ import (
 const headPeek = 1 << 20
 
 // NewCleanReader drops the inline <!DOCTYPE … ]> block found near the top of export.xml and
-// removes control characters that are invalid in XML 1.0 (PAR-2). It never buffers more than headPeek.
+// removes control characters that are invalid in XML 1.0. It never buffers more than headPeek.
 func NewCleanReader(r io.Reader) io.Reader {
 	br := bufio.NewReaderSize(r, headPeek)
 	head, _ := br.Peek(headPeek)
@@ -65,7 +65,7 @@ func (f *ctrlFilter) Read(p []byte) (int, error) {
 	}
 }
 
-// countingReader tracks consumed bytes for progress reporting (PRG-1).
+// countingReader tracks consumed bytes for progress reporting.
 type countingReader struct {
 	r io.Reader
 	n *atomic.Int64

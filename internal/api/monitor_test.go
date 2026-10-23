@@ -33,7 +33,11 @@ func (s *testServer) bearer(path, key string, out any) int {
 			s.t.Fatalf("GET %s: decode %q: %v", path, w.Body.String(), err)
 		}
 	}
-	if path != "/healthz" && w.Code != http.StatusTooManyRequests && w.Header().Get("Cache-Control") != "no-store" {
+	cache := "no-store"
+	if w.Header().Get("ETag") != "" { // data reads that clients may cache and revalidate
+		cache = "private, no-cache"
+	}
+	if path != "/healthz" && w.Code != http.StatusTooManyRequests && w.Header().Get("Cache-Control") != cache {
 		s.t.Errorf("GET %s: Cache-Control %q", path, w.Header().Get("Cache-Control"))
 	}
 	return w.Code
@@ -68,18 +72,18 @@ func TestMonitorFreshness(t *testing.T) {
 	s := newTestServer(t, true, end)
 	clk := s.clock
 	alice, bob := s.register("alice"), s.register("bob")
-	monKey, mcpKey := s.createKey(alice, "Kuma", auth.ScopeMonitor), s.createKey(alice, "Claude", auth.ScopeMCP)
+	monKey, readKey := s.createKey(alice, "Kuma", auth.ScopeMonitor), s.createKey(alice, "Claude", auth.ScopeRead)
 	bobKey := s.createKey(bob, "Kuma", auth.ScopeMonitor)
 
-	// MON-4: auth and scope.
+	// Auth and scope.
 	if code := s.bearer(path, "", nil); code != http.StatusUnauthorized {
 		t.Fatalf("no key: %d", code)
 	}
 	if code := s.bearer(path, "ritm_nope", nil); code != http.StatusUnauthorized {
 		t.Fatalf("bad key: %d", code)
 	}
-	if code := s.bearer(path, mcpKey, nil); code != http.StatusForbidden {
-		t.Fatalf("mcp key: %d", code)
+	if code := s.bearer(path, readKey, nil); code != http.StatusForbidden {
+		t.Fatalf("read key: %d", code)
 	}
 	if code, _ := s.do("GET", path, alice, nil, nil); code != http.StatusUnauthorized {
 		t.Fatalf("session cookie instead of key: %d", code)
@@ -109,7 +113,7 @@ func TestMonitorFreshness(t *testing.T) {
 		t.Fatalf("bob after alice's import: %d", code)
 	}
 
-	// MON-9: the poll is recorded for the Settings page, and the key's last use too.
+	// The poll is recorded for the Settings page, and the key's last use too.
 	tn.Query.Wait()
 	var fr query.Freshness
 	s.do("GET", "/api/v1/freshness", alice, nil, &fr)
@@ -124,7 +128,7 @@ func TestMonitorFreshness(t *testing.T) {
 		}
 	}
 
-	// Red after the threshold (MON-2), with a per-request override (MON-5).
+	// Red after the threshold, with a per-request override.
 	clk.Advance(15 * 24 * time.Hour)
 	rep = monitor.FreshnessReport{}
 	if code := s.bearer(path, monKey, &rep); code != http.StatusServiceUnavailable || rep.Status != monitor.StatusStale || rep.AgeDays == nil || *rep.AgeDays < 15 {
@@ -154,7 +158,7 @@ func TestMonitorFreshness(t *testing.T) {
 	settings["stale_after_hours"] = nil
 	s.do("PUT", "/api/v1/settings", alice, settings, nil)
 
-	// MON-1: re-uploading an older export does not reset the clock.
+	// Re-uploading an older export does not reset the clock.
 	older := o
 	older.Start = o.Start.AddDate(0, 0, -30)
 	s.importSynth(tn, older)
@@ -170,7 +174,7 @@ func TestMonitorFreshness(t *testing.T) {
 		t.Fatalf("after newer import: %d %+v", code, rep)
 	}
 
-	// Revoked keys stop working immediately (KEY-3).
+	// Revoked keys stop working immediately.
 	for _, k := range keys.Items {
 		if k.Scope == auth.ScopeMonitor {
 			s.do("DELETE", "/api/v1/api-keys/"+strconv.FormatInt(k.ID, 10), alice, nil, nil)
@@ -181,23 +185,50 @@ func TestMonitorFreshness(t *testing.T) {
 	}
 }
 
+// Guessed tokens are limited per IP; a valid key from the same IP keeps working.
 func TestMonitorKeyRateLimit(t *testing.T) {
+	const path = "/api/v1/monitor/freshness"
 	s := newTestServer(t, true, time.Now())
 	key := s.createKey(s.register("alice"), "Kuma", auth.ScopeMonitor)
-	for i := 0; i < 19; i++ {
-		if code := s.bearer("/api/v1/monitor/freshness", "ritm_guess", nil); code != http.StatusUnauthorized {
-			t.Fatalf("attempt %d: %d", i, code)
+	for i := range 20 {
+		if code := s.bearer(path, "ritm_guess", nil); code != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: %d", i+1, code)
 		}
 	}
-	if code := s.bearer("/api/v1/monitor/freshness", "ritm_guess", nil); code != http.StatusUnauthorized {
-		t.Fatalf("20th attempt: %d", code)
+	if code := s.bearer(path, "ritm_guess", nil); code != http.StatusTooManyRequests {
+		t.Fatalf("21st guess: %d, want 429", code)
 	}
-	if code := s.bearer("/api/v1/monitor/freshness", key, nil); code != http.StatusTooManyRequests {
-		t.Fatalf("after 20 failures: %d, want 429", code)
+	if code := s.bearer(path, key, nil); code != http.StatusServiceUnavailable { // valid, no data yet
+		t.Fatalf("valid key after 20 guesses: %d", code)
 	}
 	s.clock.Advance(16 * time.Minute)
-	if code := s.bearer("/api/v1/monitor/freshness", key, nil); code != http.StatusServiceUnavailable {
+	if code := s.bearer(path, "ritm_guess", nil); code != http.StatusUnauthorized {
 		t.Fatalf("after the window: %d", code)
+	}
+}
+
+// A revoked key is limited on its own: it locks out neither other keys nor the IP.
+func TestRevokedKeyRateLimit(t *testing.T) {
+	const path = "/api/v1/monitor/freshness"
+	s := newTestServer(t, true, time.Now())
+	alice := s.register("alice")
+	stale, key := s.createKey(alice, "Old", auth.ScopeMonitor), s.createKey(alice, "Kuma", auth.ScopeMonitor)
+	if _, err := s.appDB.W.Exec("UPDATE api_keys SET revoked_at = 1 WHERE name = 'Old'"); err != nil {
+		t.Fatal(err)
+	}
+	for i := range 20 {
+		if code := s.bearer(path, stale, nil); code != http.StatusUnauthorized {
+			t.Fatalf("revoked key, call %d: %d", i+1, code)
+		}
+	}
+	if code := s.bearer(path, stale, nil); code != http.StatusTooManyRequests {
+		t.Fatalf("revoked key, call 21: %d, want 429", code)
+	}
+	if code := s.bearer(path, key, nil); code != http.StatusServiceUnavailable {
+		t.Fatalf("other key: %d", code)
+	}
+	if code := s.bearer(path, "ritm_guess", nil); code != http.StatusUnauthorized {
+		t.Fatalf("guess from the same IP: %d, want 401 (not limited yet)", code)
 	}
 }
 

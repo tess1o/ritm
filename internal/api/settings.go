@@ -11,7 +11,7 @@ import (
 	"ritm/internal/tenant"
 )
 
-// ServerSettings are the environment settings the UI shows (read-only, §4).
+// ServerSettings are the environment settings the UI shows (read-only).
 type ServerSettings struct {
 	StaleAfterHours  float64 `json:"stale_after_hours" doc:"RITM_STALE_AFTER"`
 	DeltaWindowHours float64 `json:"delta_window_hours" doc:"RITM_DELTA_WINDOW"`
@@ -48,7 +48,7 @@ func (s *Server) settingsOf(ctx context.Context, t *tenant.Tenant) (*body[Settin
 func (s *Server) registerSettings() {
 	tags := []string{"Settings"}
 	register(s, sessionOnly, huma.Operation{OperationID: "getSettings", Method: http.MethodGet, Path: "/settings", Tags: tags,
-		Summary: "Settings", Description: "Goals, HR zones, load model, source priority, waking hours and other settings (§7.7)."},
+		Summary: "Settings", Description: "Goals, HR zones, load model, source priority, waking hours and other settings."},
 		func(ctx context.Context, _ *struct{}) (*body[SettingsResponse], error) {
 			t, err := s.tenant(ctx)
 			if err != nil {
@@ -58,7 +58,7 @@ func (s *Server) registerSettings() {
 		})
 
 	register(s, sessionOnly, huma.Operation{OperationID: "putSettings", Method: http.MethodPut, Path: "/settings", Tags: tags,
-		Summary: "Replace settings", Description: "Replaces all settings. When a setting that feeds derived data changes, derived tables and insights are recomputed before the response (§7.7).",
+		Summary: "Replace settings", Description: "Replaces all settings. When a setting that feeds derived data changes, derived tables and insights are recomputed before the response.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *struct{ Body derive.Settings }) (*body[SettingsResponse], error) {
 			t, err := s.tenant(ctx)

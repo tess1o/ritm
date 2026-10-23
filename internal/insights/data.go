@@ -1,4 +1,4 @@
-// Package insights is the deterministic, rule-based insights engine (§8).
+// Package insights is the deterministic, rule-based insights engine.
 package insights
 
 import (
@@ -40,8 +40,6 @@ type Data struct {
 	Anchor   days.Day // last day with Watch data
 	Today    days.Day
 }
-
-func nan() float64 { return math.NaN() }
 
 func f(v sql.NullFloat64) float64 {
 	if !v.Valid {

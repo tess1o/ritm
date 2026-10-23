@@ -12,7 +12,7 @@ declare module 'vue-router' {
   }
 }
 
-// Every screen is a lazy-loaded route (FE-3).
+// Every screen is a lazy-loaded route.
 const routes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: () => import('./views/LoginView.vue'), meta: { public: true } },
   { path: '/', name: 'dashboard', component: () => import('./views/DashboardView.vue'), meta: { title: 'This week', freshness: true } },

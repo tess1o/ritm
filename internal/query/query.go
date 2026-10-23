@@ -1,5 +1,5 @@
 // Package query is the read model shared by the REST API (and later MCP): typed results with
-// units in field names (MCP-3).
+// units in field names.
 package query
 
 import (

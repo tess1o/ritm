@@ -3,10 +3,12 @@ package httpx
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/netip"
 	"strings"
+	"sync"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) {
@@ -20,9 +22,12 @@ func Error(w http.ResponseWriter, status int, msg string) {
 	WriteJSON(w, status, map[string]string{"error": msg})
 }
 
-// trustedProxies are the peers whose X-Forwarded-For header is believed; nil means loopback and
-// private addresses (a reverse proxy on the same host or Docker network).
+// trustedProxies are the peers whose X-Forwarded-For header is believed; nil means loopback only
+// (a reverse proxy on the same host). A proxy on a Docker network must be listed explicitly: with
+// some port-forwarding setups every internet client arrives from a private address.
 var trustedProxies []netip.Prefix
+
+var warnUntrusted sync.Once
 
 // SetTrustedProxies sets the peers whose X-Forwarded-For header is honoured (RITM_TRUSTED_PROXIES).
 // Call it once at startup. An empty, non-nil slice trusts no proxy.
@@ -30,7 +35,7 @@ func SetTrustedProxies(p []netip.Prefix) { trustedProxies = p }
 
 func trusted(ip netip.Addr) bool {
 	if trustedProxies == nil {
-		return ip.IsLoopback() || ip.IsPrivate()
+		return ip.IsLoopback()
 	}
 	for _, p := range trustedProxies {
 		if p.Contains(ip) {
@@ -47,13 +52,24 @@ func ClientIP(r *http.Request) string {
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	if ip, err := netip.ParseAddr(host); err == nil && trusted(ip.Unmap()) {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			parts := strings.Split(xff, ",")
-			if last := strings.TrimSpace(parts[len(parts)-1]); last != "" {
-				return last
-			}
+	xff := r.Header.Get("X-Forwarded-For")
+	ip, err := netip.ParseAddr(host)
+	if err != nil || xff == "" {
+		return host
+	}
+	ip = ip.Unmap()
+	if !trusted(ip) {
+		if ip.IsPrivate() {
+			warnUntrusted.Do(func() {
+				slog.Warn("ignoring X-Forwarded-For from an untrusted proxy; set RITM_TRUSTED_PROXIES to its address",
+					"peer", ip.String())
+			})
 		}
+		return host
+	}
+	parts := strings.Split(xff, ",")
+	if last, err := netip.ParseAddr(strings.TrimSpace(parts[len(parts)-1])); err == nil {
+		return last.Unmap().String()
 	}
 	return host
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -79,7 +81,7 @@ func TestSuspendBlocksLoginSessionsAndKeys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key, _, err := s.CreateKey(ctx, u.ID, "k", ScopeMCP)
+	key, _, err := s.CreateKey(ctx, u.ID, "k", ScopeRead)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +155,7 @@ func TestDeleteUserCascades(t *testing.T) {
 	s := newTestService(t)
 	u := mustCreate(t, s, "alice")
 	token, _, _ := s.Login(ctx, "ip", "alice", "password1")
-	key, _, _ := s.CreateKey(ctx, u.ID, "k", ScopeMCP)
+	key, _, _ := s.CreateKey(ctx, u.ID, "k", ScopeRead)
 	if err := s.DeleteUser(ctx, u.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -196,5 +198,45 @@ func TestRateLimiterIsBounded(t *testing.T) {
 	}
 	if n := len(l.failures); n > maxLimiterKeys {
 		t.Fatalf("%d keys, want at most %d", n, maxLimiterKeys)
+	}
+}
+
+// Parallel attempts cannot all pass the check before any failure is recorded.
+func TestLoginLimitUnderConcurrency(t *testing.T) {
+	ctx := context.Background()
+	s := newTestService(t)
+	mustCreate(t, s, "alice")
+	var wg sync.WaitGroup
+	var invalid atomic.Int32
+	for i := range 30 {
+		wg.Go(func() {
+			_, _, err := s.Login(ctx, "10.0.0.1", fmt.Sprintf("user%d", i), "wrong-password")
+			if errors.Is(err, ErrInvalidCredentials) {
+				invalid.Add(1)
+			}
+		})
+	}
+	wg.Wait()
+	if n := invalid.Load(); n != 10 {
+		t.Fatalf("%d password checks from one IP, want 10", n)
+	}
+}
+
+// Signing into one account does not clear the IP's failures against other accounts.
+func TestLoginSuccessKeepsIPFailures(t *testing.T) {
+	ctx := context.Background()
+	s := newTestService(t)
+	mustCreate(t, s, "alice")
+	for i := range 9 {
+		s.Login(ctx, "10.0.0.1", fmt.Sprintf("user%d", i), "wrong-password")
+	}
+	if _, _, err := s.Login(ctx, "10.0.0.1", "alice", "password1"); err != nil {
+		t.Fatalf("correct password: %v", err)
+	}
+	if _, _, err := s.Login(ctx, "10.0.0.1", "bob", "wrong-password"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("10th failure: %v", err)
+	}
+	if _, _, err := s.Login(ctx, "10.0.0.1", "alice", "password1"); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("after 10 failures: %v, want ErrRateLimited", err)
 	}
 }

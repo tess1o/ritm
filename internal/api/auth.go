@@ -65,6 +65,15 @@ type credentialsInput struct {
 	Body Credentials
 }
 
+// checkCSRF applies the session CSRF rule to the public writes (sign-in, registration): Huma
+// reads a body without a Content-Type as JSON, so a cross-site page could otherwise post one.
+func (s *Server) checkCSRF(r *http.Request) error {
+	if err := auth.CheckCSRF(r, s.Cfg.BaseURL); err != nil {
+		return huma.Error403Forbidden(err.Error())
+	}
+	return nil
+}
+
 func (s *Server) secure(r *http.Request) bool { return s.Cfg.SecureCookies() || r.TLS != nil }
 
 func (s *Server) clock(t *tenant.Tenant) LocalClock {
@@ -111,9 +120,12 @@ func (s *Server) registerAuth() {
 		})
 
 	register(s, public, huma.Operation{OperationID: "login", Method: http.MethodPost, Path: "/auth/login", Tags: tags,
-		Summary: "Sign in", Description: "Starts a browser session (cookie `ritm_session`). 10 failures per IP or username in 15 minutes lock sign-in for that window (AUTH-2).",
+		Summary: "Sign in", Description: "Starts a browser session (cookie `ritm_session`). 10 failures per IP or username in 15 minutes lock sign-in for that window.",
 		Errors: []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests}},
 		func(ctx context.Context, in *credentialsInput) (*sessionOutput, error) {
+			if err := s.checkCSRF(in.req); err != nil {
+				return nil, err
+			}
 			token, u, err := s.Auth.Login(ctx, httpx.ClientIP(in.req), in.Body.Username, in.Body.Password)
 			if err != nil {
 				return nil, s.authProblem(ctx, err)
@@ -123,11 +135,14 @@ func (s *Server) registerAuth() {
 
 	register(s, public, huma.Operation{OperationID: "register", Method: http.MethodPost, Path: "/auth/register", Tags: tags,
 		Summary: "Create an account", DefaultStatus: http.StatusCreated,
-		Description: "Creates an account and signs it in. Only when RITM_REGISTRATION_ENABLED is set, otherwise 404 (AUTH-4). Username: 3–32 of `a-z 0-9 . _ -`; password: 8–72 bytes.",
-		Errors:      []int{http.StatusBadRequest, http.StatusNotFound, http.StatusConflict, http.StatusTooManyRequests}},
+		Description: "Creates an account and signs it in. Only when RITM_REGISTRATION_ENABLED is set, otherwise 404. Username: 3–32 of `a-z 0-9 . _ -`; password: 8–72 bytes.",
+		Errors:      []int{http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusConflict, http.StatusTooManyRequests}},
 		func(ctx context.Context, in *credentialsInput) (*sessionOutput, error) {
 			if !s.Cfg.RegistrationEnabled {
 				return nil, huma.Error404NotFound("registration is disabled")
+			}
+			if err := s.checkCSRF(in.req); err != nil {
+				return nil, err
 			}
 			token, u, err := s.Auth.Register(ctx, httpx.ClientIP(in.req), in.Body.Username, in.Body.Password)
 			if err != nil {

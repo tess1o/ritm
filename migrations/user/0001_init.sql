@@ -29,7 +29,7 @@ CREATE TABLE hourly_activity (
 CREATE INDEX hourly_activity_day ON hourly_activity(local_day, type);
 CREATE INDEX hourly_activity_type_day ON hourly_activity(type, local_day);
 
--- per-import accumulation of cumulative samples (§6.5); emptied at the start of each import
+-- per-import accumulation of cumulative samples; emptied at the start of each import
 CREATE TABLE hourly_staging (
   type TEXT NOT NULL, source_name TEXT NOT NULL,
   hour_start_ms INTEGER NOT NULL, local_day TEXT NOT NULL, local_hour INTEGER NOT NULL,

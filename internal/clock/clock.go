@@ -28,12 +28,6 @@ func (f *Fake) Now() time.Time {
 	return f.t
 }
 
-func (f *Fake) Set(t time.Time) {
-	f.mu.Lock()
-	f.t = t
-	f.mu.Unlock()
-}
-
 func (f *Fake) Advance(d time.Duration) {
 	f.mu.Lock()
 	f.t = f.t.Add(d)

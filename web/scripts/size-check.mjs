@@ -1,10 +1,11 @@
-// Bundle budget check (FE-11): initial JS ≤ 120 KB gzipped; any route ≤ 250 KB gzipped
+// Bundle budget check: initial JS ≤ 120 KB gzipped; any route ≤ 250 KB gzipped
 // including its chart chunk. Reads dist/index.html and the Vite manifest-less output.
 import { readFileSync, readdirSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const dist = new URL('../dist/', import.meta.url).pathname
+const dist = fileURLToPath(new URL('../dist/', import.meta.url))
 const assets = join(dist, 'assets')
 const gz = (f) => gzipSync(readFileSync(join(assets, f))).length
 const kb = (n) => (n / 1024).toFixed(1) + ' KB'

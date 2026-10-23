@@ -19,6 +19,8 @@ jobs:
           go-version-file: go.mod
       - run: make lint
       - run: go test ./...
+      - name: Known vulnerabilities in Go dependencies
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   web:
     runs-on: ubuntu-latest
@@ -31,10 +33,13 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
+      - name: Known vulnerabilities in shipped npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: web
       # API types must match docs/openapi.yaml (the Go test checks the spec against the handlers)
       - run: npm run gen:api && git diff --exit-code src/lib/api-schema.d.ts
         working-directory: web
-      # FE-11/FE-13: type check, lint, build and bundle budget
+      # Type check, lint, build and bundle budget
       - run: npm run typecheck && npm run lint && npm run build && npm run size
         working-directory: web
 
@@ -48,7 +53,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
-      - name: Check image size (NFR-4, ≤ 30 MB)
+      - name: Check image size (≤ 30 MB)
         run: |
           docker buildx build --platform linux/amd64 --load -t ritm:ci .
           size=$(docker image inspect ritm:ci --format '{{.Size}}')

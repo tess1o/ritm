@@ -119,10 +119,13 @@ func point(pts []ingest.RoutePoint, cum []float64, prev, i int) RoutePoint {
 	return out
 }
 
-func haversineM(a, b ingest.RoutePoint) float64 {
+func haversineM(a, b ingest.RoutePoint) float64 { return distanceM(a.Lat, a.Lon, b.Lat, b.Lon) }
+
+// distanceM is the great-circle distance in metres between two points (haversine).
+func distanceM(lat1, lon1, lat2, lon2 float64) float64 {
 	const earthR = 6_371_000.0
 	rad := math.Pi / 180
-	dLat, dLon := (b.Lat-a.Lat)*rad, (b.Lon-a.Lon)*rad
-	h := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(a.Lat*rad)*math.Cos(b.Lat*rad)*math.Sin(dLon/2)*math.Sin(dLon/2)
+	dLat, dLon := (lat2-lat1)*rad, (lon2-lon1)*rad
+	h := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(lat1*rad)*math.Cos(lat2*rad)*math.Sin(dLon/2)*math.Sin(dLon/2)
 	return 2 * earthR * math.Asin(math.Min(1, math.Sqrt(h)))
 }

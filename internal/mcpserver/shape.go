@@ -11,7 +11,7 @@ import (
 	"ritm/internal/mathx"
 )
 
-// Tool results are compact JSON for a language model (MCP-3): epoch-millisecond fields become
+// Tool results are compact JSON for a language model: epoch-millisecond fields become
 // local "YYYY-MM-DD HH:MM" strings without the _ms suffix, numbers are rounded to 2 decimals and
 // null fields are dropped (a missing field means no data).
 

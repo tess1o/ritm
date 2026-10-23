@@ -68,7 +68,7 @@ backup: env ## Back up every database: make backup DIR=backups/2026-10-22
 	@test -n "$(DIR)" || (echo "usage: make backup DIR=path/to/new-dir" && exit 1)
 	@set -a; source ./.env; set +a; $(GO) run ./cmd/ritm backup "$(DIR)"
 
-bench: build-go ## Check NFR-1..4: make bench [EXPORT=path/to/export.zip] [DAYS=1825 HR=300]
+bench: build-go ## Check the performance budgets: make bench [EXPORT=path/to/export.zip] [DAYS=1825 HR=300]
 	$(GO) run ./tools/bench -bin $(BIN) $(if $(EXPORT),-export "$(EXPORT)") -days $(or $(DAYS),1825) -hr $(or $(HR),300)
 
 docker: ## Build the image for this machine's platform (IMAGE=ritm)

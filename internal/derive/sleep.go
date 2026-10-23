@@ -58,12 +58,13 @@ type night struct {
 	asleepIntervals                       []interval
 }
 
-// computeSleep fills daily_sleep, assigning each night to its wake-up day (§7.4), and returns
+// computeSleep fills daily_sleep, assigning each night to its wake-up day, and returns
 // the asleep intervals per day for the sleeping-HR average.
 func (e *Engine) computeSleep(ctx context.Context, tx *sql.Tx, r days.Range, res *Resolved) (map[days.Day][]interval, error) {
 	fromMS, toMS := r.From.StartMS(e.zone.Location())-msDay, r.To.Add(1).StartMS(e.zone.Location())+msDay/2
 	rows, err := tx.QueryContext(ctx, `SELECT source_name, start_ms, end_ms, tz_offset_min, category_value FROM records
-		WHERE type = ? AND end_ms >= ? AND start_ms < ? ORDER BY source_name, start_ms`, ingest.TypeSleep, fromMS, toMS)
+		WHERE type = ? AND start_ms >= ? AND end_ms >= ? AND start_ms < ? ORDER BY source_name, start_ms`,
+		ingest.TypeSleep, fromMS-ingest.MaxSleepSampleMS, fromMS, toMS)
 	if err != nil {
 		return nil, err
 	}

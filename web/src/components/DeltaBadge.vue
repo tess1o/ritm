@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Delta vs baseline; direction shown by icon and sign, never colour alone (UI-D5).
+// Delta vs baseline; direction shown by icon and sign, never colour alone.
 import { computed } from 'vue'
 import Icon from './Icon.vue'
 import { num } from '../lib/fmt'

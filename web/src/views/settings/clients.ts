@@ -16,11 +16,11 @@ export const CLIENTS: Record<KeyScope, { label: string; icon: string; blurb: str
     keyNote: 'A monitor key can only read data freshness.',
     defaultName: 'Uptime Kuma',
   },
-  mcp: {
-    label: 'AI assistant',
+  read: {
+    label: 'AI assistant or script',
     icon: 'bot',
-    blurb: 'Let Claude or another MCP client read and analyse your data.',
-    keyNote: 'An MCP key works only with the MCP endpoint at /mcp.',
+    blurb: 'Let Claude or another MCP client, or your own scripts and integrations, read and analyse your data.',
+    keyNote: 'A read key reads health data over the REST API and the MCP server at /mcp; it cannot change anything.',
     defaultName: 'Claude',
   },
 }

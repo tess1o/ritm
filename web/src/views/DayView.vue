@@ -10,11 +10,12 @@ import KpiCard from '../components/KpiCard.vue'
 import MetricStrip, { type StripItem } from '../components/MetricStrip.vue'
 import StateBlock from '../components/StateBlock.vue'
 import { useAsync } from '../composables/useAsync'
+import { useFreshness } from '../composables/useFreshness'
 import { setPageMeta } from '../composables/usePageMeta'
 import { useSettings } from '../composables/useSettings'
 import { useSwipe } from '../composables/useSwipe'
 import { get } from '../lib/api'
-import { addDays, clock, hm, km, longDay, num, shortDayYear, time, today } from '../lib/fmt'
+import { addDays, clock, dayOf, hm, km, longDay, num, shortDayYear, time, today } from '../lib/fmt'
 import type { DayDetail } from '../lib/types'
 import { workoutIcon } from '../lib/workouts'
 import { color, isPhone } from '../charts/helpers'
@@ -27,6 +28,23 @@ const d = computed(() => res.data.value)
 setPageMeta(() => ({ title: longDay(day.value), subtitle: 'Swipe or use the arrows to change day' }))
 const settings = useSettings()
 settings.load()
+const fresh = useFreshness()
+fresh.load()
+
+// A day with nothing recorded gets one empty state instead of a "no data" in every card.
+const empty = computed(() => {
+  const x = d.value
+  return !!x && !x.activity && !x.heart && !x.sleep && !x.hr.length && !x.workouts.length && !x.sleep_segments.length && !x.stood_hours.length
+})
+const latestDay = computed(() => (fresh.data.value?.last_data_at ? dayOf(fresh.data.value.last_data_at) : null))
+const emptyText = computed(() => {
+  if (!fresh.data.value) return ''
+  if (!latestDay.value) return 'Nothing is imported yet. Upload export.zip from the Health app to fill in your days.'
+  if (day.value > latestDay.value) {
+    return `Your data currently ends on ${longDay(latestDay.value)}. Upload a newer export to bring it up to date.`
+  }
+  return 'No steps, heart rate, sleep or workouts were recorded on this day.'
+})
 
 // Single day: sparklines show the day's own shape (steps per hour, heart rate through the day).
 const kpis = computed(() => {
@@ -224,7 +242,21 @@ const option = computed(() => {
     </Teleport>
 
     <StateBlock :loading="res.loading.value" :error="res.error.value" :empty="!d" :height="320">
-      <template v-if="d">
+      <section v-if="empty" class="emptyday" role="status">
+        <IconBadge name="calendar" :size="72" tone="--accent" />
+        <h2>Nothing recorded on {{ longDay(day) }}</h2>
+        <p class="text-2">{{ emptyText }}</p>
+        <div class="actions">
+          <button class="btn" type="button" @click="go(-1)"><Icon name="left" :size="16" /> Previous day</button>
+          <RouterLink v-if="latestDay && latestDay < day" :to="`/day/${latestDay}`" class="btn primary" replace>
+            Latest day with data <Icon name="right" :size="16" />
+          </RouterLink>
+          <RouterLink v-if="!latestDay || latestDay < day" to="/import" class="btn" :class="{ primary: !latestDay }">
+            <Icon name="upload" :size="16" /> Import
+          </RouterLink>
+        </div>
+      </section>
+      <template v-else-if="d">
         <div class="kpis">
           <KpiCard v-for="k in kpis" :key="k.label" v-bind="k" />
         </div>
@@ -347,6 +379,34 @@ const option = computed(() => {
 }
 .kv span {
   color: var(--text-2);
+}
+.emptyday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: min(60vh, 520px);
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.emptyday h2 {
+  margin: 8px 0 0;
+  font-size: 1.25rem;
+}
+.emptyday p {
+  max-width: 44ch;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
 }
 .mismatch {
   align-self: flex-start;

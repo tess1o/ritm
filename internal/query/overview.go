@@ -172,7 +172,7 @@ func (s *Service) HasSleep(ctx context.Context) (bool, error) {
 }
 
 // StaleAfter returns the effective no-new-data threshold (Settings override env). It reads only
-// the stored settings, so the monitoring endpoint stays a couple of single-row reads (MON-3).
+// the stored settings, so the monitoring endpoint stays a couple of single-row reads.
 func (s *Service) StaleAfter(ctx context.Context, envDefault time.Duration) (time.Duration, error) {
 	st, err := derive.LoadSettings(ctx, s.db.RO)
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *Service) Freshness(ctx context.Context, envDefault time.Duration) (Fres
 }
 
 // MarkChecked records a monitoring poll in data_freshness.last_checked_at, at most once a minute
-// (MON-9). The write runs in the background so a long import transaction never delays the probe;
+// . The write runs in the background so a long import transaction never delays the probe;
 // Wait blocks until pending writes finish.
 func (s *Service) MarkChecked(now time.Time) {
 	ms := now.UnixMilli()

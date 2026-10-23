@@ -16,7 +16,7 @@ import (
 	"ritm/internal/store"
 )
 
-// MaxHoldMS caps how long one HR sample is assumed to hold during zone integration (§7.5).
+// MaxHoldMS caps how long one HR sample is assumed to hold during zone integration.
 const MaxHoldMS = 30_000
 
 type HRSample struct {

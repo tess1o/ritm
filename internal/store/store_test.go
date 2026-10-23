@@ -5,7 +5,9 @@ import (
 	"errors"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"testing"
+	"testing/fstest"
 
 	"ritm/migrations"
 )
@@ -55,4 +57,47 @@ func TestLockFileExcludesOtherHolders(t *testing.T) {
 		t.Fatalf("lock after unlock: %v", err)
 	}
 	unlock2()
+}
+
+// Keys created with the old "mcp" scope become "read" keys.
+func TestReadScopeMigration(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	old := fstest.MapFS{}
+	for _, name := range []string{"0001_init.sql", "0002_ingest_scope.sql"} {
+		b, err := fs.ReadFile(migrations.App, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		old[name] = &fstest.MapFile{Data: b}
+	}
+	db, err := OpenPath(ctx, filepath.Join(dir, "app.db"), old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.W.ExecContext(ctx, `INSERT INTO users (id, username, password_hash, db_name, created_at, updated_at) VALUES (1, 'a', 'x', 'u1', 0, 0);
+		INSERT INTO api_keys (user_id, name, prefix, scope, key_hash, created_at) VALUES
+		  (1, 'Claude', 'p1', 'mcp', x'01', 0), (1, 'Kuma', 'p2', 'monitor', x'02', 0), (1, 'Shortcut', 'p3', 'ingest', x'03', 0)`)
+	db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if db, err = OpenApp(ctx, dir); err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	rows, err := db.RO.QueryContext(ctx, "SELECT name, scope FROM api_keys ORDER BY id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var name, scope string
+		rows.Scan(&name, &scope)
+		got = append(got, name+"="+scope)
+	}
+	if want := "Claude=read Kuma=monitor Shortcut=ingest"; strings.Join(got, " ") != want {
+		t.Fatalf("keys after migration: %v, want %s", got, want)
+	}
 }

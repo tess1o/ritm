@@ -13,6 +13,7 @@ type CalendarDay struct {
 	Day      string   `json:"day"`
 	Activity bool     `json:"activity" doc:"Daily activity is stored for the day"`
 	Steps    *float64 `json:"steps"`
+	Watch    bool     `json:"watch" doc:"The Watch recorded the day; without it, steps come from the phone alone"`
 	Workouts int      `json:"workouts" doc:"Workouts that started that local day"`
 	Route    bool     `json:"route" doc:"At least one of the day's workouts has a GPS route"`
 }
@@ -22,18 +23,19 @@ type CalendarDay struct {
 // first workout.
 func (s *Service) Calendar(ctx context.Context, r days.Range) ([]CalendarDay, error) {
 	byDay := map[string]*CalendarDay{}
-	rows, err := s.db.RO.QueryContext(ctx, "SELECT day, steps FROM daily_activity WHERE day BETWEEN ? AND ?", r.From.String(), r.To.String())
+	rows, err := s.db.RO.QueryContext(ctx, "SELECT day, steps, coalesce(has_watch_data, 0) FROM daily_activity WHERE day BETWEEN ? AND ?", r.From.String(), r.To.String())
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var day string
 		var steps sql.NullFloat64
-		if err := rows.Scan(&day, &steps); err != nil {
+		var watch bool
+		if err := rows.Scan(&day, &steps, &watch); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		d := &CalendarDay{Day: day, Activity: true}
+		d := &CalendarDay{Day: day, Activity: true, Watch: watch}
 		if steps.Valid {
 			d.Steps = &steps.Float64
 		}
@@ -43,8 +45,11 @@ func (s *Service) Calendar(ctx context.Context, r days.Range) ([]CalendarDay, er
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	// start_ms bounds (a day wider, for UTC offsets) let SQLite use the workouts_start index, as in Workouts.
+	from, to := s.dayBounds(r)
 	rows, err = s.db.RO.QueryContext(ctx, `SELECT local_day, count(*), max(has_route) FROM v_workouts
-		WHERE local_day BETWEEN ? AND ? GROUP BY local_day`, r.From.String(), r.To.String())
+		WHERE start_ms >= ? AND start_ms < ? AND local_day BETWEEN ? AND ? GROUP BY local_day`,
+		from-days.MSPerDay, to+days.MSPerDay, r.From.String(), r.To.String())
 	if err != nil {
 		return nil, err
 	}

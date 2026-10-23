@@ -3,6 +3,7 @@ package ingest
 import (
 	"context"
 	"errors"
+	"math"
 	"testing"
 
 	"ritm/internal/synth"
@@ -69,5 +70,63 @@ func TestFailedRecomputeFailsImport(t *testing.T) {
 	})
 	if len(got) != 1 {
 		t.Fatalf("post-import hook calls: %v", got)
+	}
+}
+
+// Stored routes carry their location summary, and routes stored before it existed get it filled in.
+func TestRouteLocations(t *testing.T) {
+	ctx := context.Background()
+	db := openDB(t)
+	o := baseOpts(14)
+	o.Walks = true
+	runImport(t, db, writeExport(t, "a.zip", o), false)
+	check := func(when string) {
+		t.Helper()
+		var n, points int
+		var lat, lon, maxLat float64
+		if err := db.RO.QueryRowContext(ctx, `SELECT count(*), min(point_count), min(start_lat), min(start_lon), max(max_lat)
+			FROM workout_routes WHERE point_count IS NOT NULL`).Scan(&n, &points, &lat, &lon, &maxLat); err != nil {
+			t.Fatal(err)
+		}
+		if n != 2 || points != synth.WalkPoints || math.Abs(lat-50.45) > 1e-6 || math.Abs(lon-30.52) > 1e-6 || maxLat <= lat {
+			t.Fatalf("%s: %d located routes, %d points, start %v,%v, max lat %v", when, n, points, lat, lon, maxLat)
+		}
+	}
+	check("after import")
+
+	if _, err := db.W.ExecContext(ctx, "UPDATE workout_routes SET point_count = NULL, start_lat = NULL"); err != nil {
+		t.Fatal(err)
+	}
+	var before, after int64
+	db.RO.QueryRowContext(ctx, "SELECT data_version FROM data_freshness").Scan(&before)
+	if n, err := BackfillRouteLocations(ctx, db); err != nil || n != 2 {
+		t.Fatalf("backfill: %d, %v", n, err)
+	}
+	check("after backfill")
+	db.RO.QueryRowContext(ctx, "SELECT data_version FROM data_freshness").Scan(&after)
+	if after <= before {
+		t.Fatalf("data version %d → %d, want it to go up", before, after)
+	}
+	if n, err := BackfillRouteLocations(ctx, db); err != nil || n != 0 {
+		t.Fatalf("second backfill: %d, %v", n, err)
+	}
+}
+
+func TestWorkoutCategory(t *testing.T) {
+	for typ, want := range map[string]string{
+		"HKWorkoutActivityTypeRunning": "run", "HKWorkoutActivityTypeWalking": "walk",
+		"HKWorkoutActivityTypeFunctionalStrengthTraining": "strength", "HKWorkoutActivityTypeYoga": "other",
+	} {
+		if got, _ := WorkoutCategory(typ); got != want {
+			t.Errorf("%s: %s, want %s", typ, got, want)
+		}
+	}
+	if _, d := WorkoutCategory("HKWorkoutActivityTypeCycling"); !d {
+		t.Error("cycling should be distance based")
+	}
+	for _, c := range Categories[:len(Categories)-1] {
+		if len(CategoryTypes(c)) == 0 {
+			t.Errorf("category %s has no types", c)
+		}
 	}
 }

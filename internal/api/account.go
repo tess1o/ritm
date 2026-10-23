@@ -60,7 +60,7 @@ func (s *Server) registerAccount() {
 
 	register(s, sessionOnly, huma.Operation{OperationID: "changePassword", Method: http.MethodPut, Path: "/account/password", Tags: tags,
 		Summary: "Change password", DefaultStatus: http.StatusNoContent,
-		Description: "Requires the current password; the user's other sessions end (AUTH-5).", Errors: []int{http.StatusBadRequest, http.StatusTooManyRequests}},
+		Description: "Requires the current password; the user's other sessions end.", Errors: []int{http.StatusBadRequest, http.StatusTooManyRequests}},
 		func(ctx context.Context, in *passwordChangeInput) (*struct{}, error) {
 			if err := auth.ValidatePassword(in.Body.NewPassword); err != nil {
 				return nil, huma.Error400BadRequest(err.Error())
@@ -77,7 +77,7 @@ func (s *Server) registerAccount() {
 
 	register(s, sessionOnly, huma.Operation{OperationID: "resetAccountData", Method: http.MethodPost, Path: "/account/reset", Tags: tags,
 		Summary: "Delete all health data", DefaultStatus: http.StatusNoContent,
-		Description: "Replaces the user's database with an empty one: imports, samples, workouts, insights, notes and settings go; the account and API keys stay (AUTH-5).",
+		Description: "Replaces the user's database with an empty one: imports, samples, workouts, insights, notes and settings go; the account and API keys stay.",
 		Errors:      []int{http.StatusTooManyRequests}},
 		func(ctx context.Context, in *confirmInput) (*struct{}, error) {
 			u, err := s.confirm(ctx, in)
@@ -93,7 +93,7 @@ func (s *Server) registerAccount() {
 
 	register(s, sessionOnly, huma.Operation{OperationID: "deleteAccount", Method: http.MethodDelete, Path: "/account", Tags: tags,
 		Summary: "Delete the account", DefaultStatus: http.StatusNoContent,
-		Description: "Deletes the user, their sessions, API keys and data (AUTH-5).", Errors: []int{http.StatusTooManyRequests}},
+		Description: "Deletes the user, their sessions, API keys and data.", Errors: []int{http.StatusTooManyRequests}},
 		func(ctx context.Context, in *confirmInput) (*cookieOutput, error) {
 			u, err := s.confirm(ctx, in)
 			if err != nil {

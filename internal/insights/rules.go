@@ -11,14 +11,14 @@ import (
 	"ritm/internal/mathx"
 )
 
-// Noise-control parameters (INS-3).
+// Noise-control parameters.
 const (
 	kStdev           = 1.0 // |Δ| must also exceed k × stdev of baseline weekly values
 	minWatchDaysWeek = 5   // days with Watch data needed in a week
 	minBaselineWeeks = 3   // of the 4 baseline weeks
 )
 
-// Rules returns the v1 rule set (§8.3).
+// Rules returns the v1 rule set.
 func Rules() []Rule {
 	return []Rule{
 		{"activity.steps_trend", "activity", Weekly, stepsTrend},
@@ -610,7 +610,7 @@ func durationDrift(c *Ctx, p Period) *Insight {
 }
 
 // NextDayValues collects the resting HR and HRV of days in r that follow a day with Watch data,
-// split by whether that day had a main-type workout (UC6). The recovery rule and the Sleep page
+// split by whether that day had a main-type workout. The recovery rule and the Sleep page
 // both use it.
 type NextDayValues struct {
 	AfterGymRHR, AfterRestRHR, AfterGymHRV, AfterRestHRV []float64

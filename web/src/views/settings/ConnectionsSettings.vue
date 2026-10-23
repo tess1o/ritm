@@ -69,8 +69,8 @@ const label = (k: ApiKey) => CLIENTS[k.scope]?.label ?? k.scope
           <span v-else class="chip">Not connected</span>
           <span v-if="s === 'monitor' && kuma && activeFor(s).length" class="chip" :class="kuma.ok ? 'positive' : 'attention'">{{ kuma.code }}</span>
         </div>
-        <label v-if="s === 'mcp'" class="check small">
-          <input v-model="form.allow_sql" type="checkbox" /> Allow read-only SQL queries (<code>query_sql</code>)
+        <label v-if="s === 'read'" class="check small">
+          <input v-model="form.allow_sql" type="checkbox" /> Allow read-only SQL queries over MCP (<code>query_sql</code>) for every read key
         </label>
         <button class="btn small" :class="{ primary: !activeFor(s).length }" type="button" @click="openGuide(s)">
           {{ activeFor(s).length ? 'Add key / show setup' : 'Set up' }}

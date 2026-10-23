@@ -1,11 +1,11 @@
-// Thin fetch wrapper (FE-4): JSON, errors, 401 → login redirect, CSRF header. Paths are relative
+// Thin fetch wrapper: JSON, errors, 401 → login redirect, CSRF header. Paths are relative
 // to the versioned API base, e.g. api('/overview') → /api/v1/overview (see docs/openapi.yaml).
 import type { Import } from './types'
 
 /** Base path of the REST API. */
 export const API_BASE = '/api/v1'
 
-export class ApiError extends Error {
+class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
     super(message)

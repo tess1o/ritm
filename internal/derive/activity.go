@@ -12,7 +12,7 @@ import (
 	"ritm/internal/store"
 )
 
-// ActiveHourSteps is the step threshold for an hour to count as active (§7.2).
+// ActiveHourSteps is the step threshold for an hour to count as active.
 const ActiveHourSteps = 250
 
 type hourKey struct {
@@ -22,7 +22,7 @@ type hourKey struct {
 }
 
 // hourlyTotals returns per-day, per-type, per-hour values using the highest-priority source that
-// has data in each hour (SRC-2).
+// has data in each hour.
 func (e *Engine) hourlyTotals(ctx context.Context, tx *sql.Tx, r days.Range, res *Resolved) (map[hourKey]float64, map[days.Day]bool, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT type, source_name, local_day, local_hour, sum(value) FROM hourly_activity
 		WHERE local_day BETWEEN ? AND ? GROUP BY type, source_name, local_day, local_hour`, r.From.String(), r.To.String())

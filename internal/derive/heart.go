@@ -8,6 +8,7 @@ import (
 	"ritm/internal/days"
 	"ritm/internal/ingest"
 	"ritm/internal/mathx"
+	"ritm/internal/store"
 )
 
 var heartTypes = []string{
@@ -21,7 +22,7 @@ type daySeries struct {
 	ms   []int64
 }
 
-// computeHeart fills daily_heart (§7.3). For each day and type, samples of the highest-priority
+// computeHeart fills daily_heart. For each day and type, samples of the highest-priority
 // source present that day are used.
 func (e *Engine) computeHeart(ctx context.Context, tx *sql.Tx, r days.Range, res *Resolved, asleep map[days.Day][]interval) error {
 	fromMS, toMS := r.From.StartMS(e.zone.Location())-msDay, r.To.Add(1).StartMS(e.zone.Location())+msDay
@@ -56,7 +57,7 @@ func (e *Engine) computeHeart(ctx context.Context, tx *sql.Tx, r days.Range, res
 	}
 	q := `SELECT * FROM (
 		SELECT type, source_name, start_ms, tz_offset_min, value FROM records
-			WHERE type IN (` + placeholders(len(others)) + `) AND start_ms >= ? AND start_ms < ?
+			WHERE type IN (` + store.Placeholders(len(others)) + `) AND start_ms >= ? AND start_ms < ?
 		UNION ALL
 		SELECT type, source_name, start_ms, tz_offset_min, value FROM records
 			WHERE type = ? AND start_ms >= ? AND start_ms < ?) ORDER BY start_ms`
@@ -205,15 +206,4 @@ func (e *Engine) computeHeart(ctx context.Context, tx *sql.Tx, r days.Range, res
 		}
 	}
 	return nil
-}
-
-func placeholders(n int) string {
-	b := make([]byte, 0, n*2)
-	for i := 0; i < n; i++ {
-		if i > 0 {
-			b = append(b, ',')
-		}
-		b = append(b, '?')
-	}
-	return string(b)
 }

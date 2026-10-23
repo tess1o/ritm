@@ -1,4 +1,4 @@
-/** Horizontal swipe detection for prev/next navigation (UI-M3). */
+/** Horizontal swipe detection for prev/next navigation. */
 export function useSwipe(onLeft: () => void, onRight: () => void, threshold = 60) {
   let x0 = 0
   let y0 = 0
@@ -18,7 +18,7 @@ export function useSwipe(onLeft: () => void, onRight: () => void, threshold = 60
   return { onTouchStart, onTouchEnd }
 }
 
-/** Swipe left/right on a period page to move to the next/previous period (UI-M3). */
+/** Swipe left/right on a period page to move to the next/previous period. */
 export function usePeriodSwipe(shift: (direction: -1 | 1) => void, canGoForward: () => boolean) {
   return useSwipe(
     () => canGoForward() && shift(1),

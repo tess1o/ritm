@@ -97,11 +97,11 @@ func (s *Service) DayDetail(ctx context.Context, d days.Day, hrBucketS int) (*Da
 }
 
 // sleepSegments returns the sleep samples in [from, to) of one source: the highest-priority
-// source that recorded sleep (not just time in bed), as daily_sleep does (SRC-2). Without that,
+// source that recorded sleep (not just time in bed), as daily_sleep does. Without that,
 // iPhone and Watch stages would overlap on the timeline.
 func (s *Service) sleepSegments(ctx context.Context, from, to int64) ([]SleepSegment, error) {
 	rows, err := s.db.RO.QueryContext(ctx, `SELECT source_name, category_value, start_ms, end_ms FROM records WHERE type = ?
-		AND end_ms > ? AND start_ms < ? ORDER BY start_ms`, ingest.TypeSleep, from, to)
+		AND start_ms >= ? AND end_ms > ? AND start_ms < ? ORDER BY start_ms`, ingest.TypeSleep, from-ingest.MaxSleepSampleMS, from, to)
 	if err != nil {
 		return nil, err
 	}

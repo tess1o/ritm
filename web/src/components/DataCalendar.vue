@@ -423,7 +423,7 @@ header {
 }
 .day.end {
   background: var(--accent);
-  color: #0b1020;
+  color: var(--on-accent);
 }
 .day:disabled {
   opacity: 0.3;
@@ -452,7 +452,7 @@ header {
   background: var(--c-exercise);
 }
 .day.end .dot {
-  box-shadow: 0 0 0 1px #0b1020;
+  box-shadow: 0 0 0 1px var(--on-accent);
 }
 .months {
   display: grid;

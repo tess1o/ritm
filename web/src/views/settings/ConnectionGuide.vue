@@ -18,6 +18,7 @@ const token = computed(() => props.secret ?? 'ritm_…')
 const uploadURL = computed(() => `${props.base}${API_BASE}/imports`)
 const freshnessURL = computed(() => `${props.base}${API_BASE}/monitor/freshness`)
 const healthURL = computed(() => `${props.base}/healthz`)
+const overviewURL = computed(() => `${props.base}${API_BASE}/overview?period=last_7d`)
 const mcpConfig = computed(() => JSON.stringify({ mcpServers: { ritm: { type: 'http', url: `${props.base}/mcp`, headers: { Authorization: `Bearer ${token.value}` } } } }, null, 2))
 </script>
 
@@ -97,13 +98,22 @@ X-File-Name: export.zip</pre>
       </details>
     </section>
 
-    <section v-else class="step">
-      <h3><span class="num">2</span> Add Ritm to your assistant</h3>
-      <p class="small text-2">MCP client config (streamable HTTP):</p>
-      <pre>{{ mcpConfig }}</pre>
-      <p class="muted small">Ready-made snippets for Claude Code, Claude Desktop, VS Code and Cursor are on
-        <RouterLink to="/assistant" @click="emit('close')">AI assistants</RouterLink>.</p>
-    </section>
+    <template v-else>
+      <section class="step">
+        <h3><span class="num">2</span> Add Ritm to your assistant</h3>
+        <p class="small text-2">MCP client config (streamable HTTP):</p>
+        <pre>{{ mcpConfig }}</pre>
+        <p class="muted small">Ready-made snippets for Claude Code, Claude Desktop, VS Code and Cursor are on
+          <RouterLink to="/assistant" @click="emit('close')">AI assistants</RouterLink>.</p>
+      </section>
+      <section class="step">
+        <h3><span class="num">2</span> Or read the REST API from a script</h3>
+        <pre>curl -H "Authorization: Bearer {{ token }}" \
+  "{{ overviewURL }}"</pre>
+        <p class="muted small">Every data read (activity, heart, sleep, workouts, training, insights) accepts the key. Endpoints and
+          fields are described at <a :href="`${API_BASE}/docs`" target="_blank" rel="noopener">{{ API_BASE }}/docs</a>.</p>
+      </section>
+    </template>
 
     <div class="row end">
       <button class="btn" type="button" @click="emit('close')">Done</button>

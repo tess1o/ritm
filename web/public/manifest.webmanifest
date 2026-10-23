@@ -1,4 +1,6 @@
 {
+  "id": "/",
+  "lang": "en",
   "name": "Ritm",
   "short_name": "Ritm",
   "description": "Apple Watch activity, heart and training history",

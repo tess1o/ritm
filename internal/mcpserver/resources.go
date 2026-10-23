@@ -18,7 +18,7 @@ const (
 // schemaObjects are the tables and views described by ritm://schema, in reading order.
 var schemaObjects = []struct{ name, about string }{
 	{"v_daily", "View, one row per local day: activity, heart, sleep and training load joined. Start here."},
-	{"v_workouts", "View, one row per workout with derived metrics, RPE and notes."},
+	{"v_workouts", "View, one row per workout with derived metrics, RPE and notes, the stable workout_key, and for workouts with a GPS route its start and end point and bounds (start_lat … max_lon)."},
 	{"daily_activity", "Per local day: activity totals, rings (ring_* columns), steps_by_hour_json (24 values)."},
 	{"daily_heart", "Per local day: HR range, resting/walking HR, HRV, VO2max, SpO2, respiration, wrist temperature."},
 	{"daily_sleep", "Per night, keyed by the wake-up day; bedtime_ms/wake_ms are UTC epoch ms."},

@@ -13,7 +13,7 @@ function initial(): { key: PeriodKey; from: string; to: string; compare: boolean
   } catch {
     /* storage unavailable */
   }
-  // shorter default on phones (UI-M6)
+  // shorter default on phones
   const phone = typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
   return { key: phone ? 'week' : 'month', from: addDays(today(), -29), to: today(), compare: true }
 }
@@ -31,7 +31,7 @@ watch(
   { deep: true },
 )
 
-/** Shared period selection used by every screen (§12). */
+/** Shared period selection used by every screen. */
 export function usePeriod() {
   const range = computed(() => {
     const s = state.value

@@ -1,7 +1,10 @@
-// Minimal service worker (FE-9): caches the app shell and an offline page; API calls always
+// Minimal service worker: caches the app shell and an offline page; API calls always
 // go to the network (no offline data mode).
-const CACHE = 'ritm-shell-v1'
-const SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png']
+// __BUILD__ is replaced at build time by a hash of the bundle (vite.config.ts), so each deploy
+// changes this file: the browser installs the new worker, which drops the previous caches and
+// the old hashed assets in them.
+const CACHE = 'ritm-__BUILD__'
+const SHELL = ['/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png']
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()))

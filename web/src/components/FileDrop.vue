@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Drag-and-drop or tap to pick export.zip (works from the iOS Files app, UI-M7).
+// Drag-and-drop or tap to pick export.zip (works from the iOS Files app).
 import { ref } from 'vue'
 import Icon from './Icon.vue'
 

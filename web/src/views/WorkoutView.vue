@@ -273,10 +273,6 @@ async function save() {
 </template>
 
 <style scoped>
-.inline {
-  display: inline;
-  vertical-align: -2px;
-}
 .rpe {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -293,7 +289,7 @@ async function save() {
 .rpe button.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #0b1020;
+  color: var(--on-accent);
 }
 @media (min-width: 640px) {
   .rpe {

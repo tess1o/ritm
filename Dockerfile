@@ -22,7 +22,7 @@ COPY web/embed.go web/embed.go
 COPY --from=web /src/web/dist web/dist
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o /out/ritm ./cmd/ritm \
- && mkdir -p /out/data
+ && mkdir -p /out/data && chmod 0700 /out/data
 
 # distroless/static: no shell, no package manager; ships CA certificates, tzdata and a nonroot user.
 FROM gcr.io/distroless/static-debian12:nonroot

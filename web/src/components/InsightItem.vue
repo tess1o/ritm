@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Polarity is conveyed by icon + label, not colour alone (UI-D5).
+// Polarity is conveyed by icon + label, not colour alone.
 import { computed } from 'vue'
 import Icon from './Icon.vue'
 import type { Insight } from '../lib/types'

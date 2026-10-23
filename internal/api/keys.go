@@ -14,10 +14,10 @@ import (
 // NewAPIKey creates an API key.
 type NewAPIKey struct {
 	Name  string `json:"name" minLength:"1" maxLength:"80" example:"iPhone Shortcut"`
-	Scope string `json:"scope" enum:"ingest,monitor,mcp" doc:"ingest: upload exports and read their status; monitor: data freshness (Uptime Kuma); mcp: the MCP server"`
+	Scope string `json:"scope" enum:"read,ingest,monitor" doc:"read: health data over the REST API and the MCP server; ingest: upload exports and read their status; monitor: data freshness (Uptime Kuma)"`
 }
 
-// CreatedAPIKey is a new key with its secret, which is shown only once (KEY-1).
+// CreatedAPIKey is a new key with its secret, which is shown only once.
 type CreatedAPIKey struct {
 	Key    auth.APIKey `json:"key"`
 	Secret string      `json:"secret" example:"ritm_3x…" doc:"Send as Authorization: Bearer <secret>. Not retrievable later."`
@@ -31,7 +31,7 @@ type IDPath struct {
 func (s *Server) registerKeys() {
 	tags := []string{"API keys"}
 	register(s, sessionOnly, huma.Operation{OperationID: "listApiKeys", Method: http.MethodGet, Path: "/api-keys", Tags: tags,
-		Summary: "List API keys", Description: "All keys of the user, newest first, including revoked ones (KEY-3)."},
+		Summary: "List API keys", Description: "All keys of the user, newest first, including revoked ones."},
 		func(ctx context.Context, _ *struct{}) (*body[Items[auth.APIKey]], error) {
 			keys, err := s.Auth.ListKeys(ctx, user(ctx).ID)
 			if err != nil {
@@ -42,7 +42,7 @@ func (s *Server) registerKeys() {
 
 	register(s, sessionOnly, huma.Operation{OperationID: "createApiKey", Method: http.MethodPost, Path: "/api-keys", Tags: tags,
 		Summary: "Create an API key", DefaultStatus: http.StatusCreated,
-		Description: "Keys are `ritm_` + 32 random bytes; only a hash is stored, so the secret is returned once (KEY-1).", Errors: []int{http.StatusBadRequest}},
+		Description: "Keys are `ritm_` + 32 random bytes; only a hash is stored, so the secret is returned once.", Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *struct{ Body NewAPIKey }) (*body[CreatedAPIKey], error) {
 			plain, k, err := s.Auth.CreateKey(ctx, user(ctx).ID, in.Body.Name, in.Body.Scope)
 			if err != nil {
@@ -52,7 +52,7 @@ func (s *Server) registerKeys() {
 		})
 
 	register(s, sessionOnly, huma.Operation{OperationID: "revokeApiKey", Method: http.MethodDelete, Path: "/api-keys/{id}", Tags: tags,
-		Summary: "Revoke an API key", DefaultStatus: http.StatusNoContent, Description: "Takes effect immediately (KEY-3).", Errors: []int{http.StatusNotFound}},
+		Summary: "Revoke an API key", DefaultStatus: http.StatusNoContent, Description: "Takes effect immediately.", Errors: []int{http.StatusNotFound}},
 		func(ctx context.Context, in *IDPath) (*struct{}, error) {
 			err := s.Auth.RevokeKey(ctx, user(ctx).ID, in.ID)
 			if errors.Is(err, sql.ErrNoRows) {

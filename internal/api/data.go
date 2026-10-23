@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 
@@ -56,7 +57,10 @@ func ranged[T any](r days.Range, items []T) *body[RangeItems[T]] {
 // FreshnessSummary is the data freshness shown in the app chrome.
 type FreshnessSummary struct {
 	query.Freshness
-	HasSleepData bool `json:"has_sleep_data" doc:"Any night of sleep is stored (the Sleep page is shown)"`
+	HasSleepData    bool       `json:"has_sleep_data" doc:"Any night of sleep is stored (the Sleep page is shown)"`
+	DataVersion     int64      `json:"data_version" doc:"Goes up with every change to the data (imports, recomputes, settings, RPE and notes); a client can compare it to tell whether its cache is current"`
+	WorkoutsFirstAt *time.Time `json:"workouts_first_at" doc:"Start of the first workout; null without workouts"`
+	WorkoutsLastAt  *time.Time `json:"workouts_last_at" doc:"End of the last workout; null without workouts"`
 }
 
 // DataCalendar marks the days in a range that have data, for the date pickers.
@@ -93,7 +97,7 @@ type activityInput struct {
 	Hours bool `query:"hours" default:"true" doc:"Include steps_by_hour (24 values per day)"`
 }
 
-// RecoveryReport compares the mornings after training days with those after rest days (UC6).
+// RecoveryReport compares the mornings after training days with those after rest days.
 type RecoveryReport struct {
 	From string `json:"from" format:"date"`
 	To   string `json:"to" format:"date"`
@@ -101,7 +105,7 @@ type RecoveryReport struct {
 }
 
 func (s *Server) registerData() {
-	register(s, sessionOnly, huma.Operation{OperationID: "getOverview", Method: http.MethodGet, Path: "/overview", Tags: []string{"Dashboard"},
+	register(s, dataRead, huma.Operation{OperationID: "getOverview", Method: http.MethodGet, Path: "/overview", Tags: []string{"Dashboard"},
 		Summary: "Period overview", Description: "Activity, heart, sleep and training averages for a period (default the last 7 days) with deltas vs a baseline " +
 			"(the 28 days before for periods up to 28 days, else the preceding equal period), latest insights, scores and freshness.",
 		Errors: []int{http.StatusBadRequest}},
@@ -117,8 +121,8 @@ func (s *Server) registerData() {
 			return ok(o), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "getFreshness", Method: http.MethodGet, Path: "/freshness", Tags: []string{"Dashboard"},
-		Summary: "Data freshness", Description: "When data last arrived and whether it is stale (same logic as the monitor endpoint, MON-12)."},
+	register(s, dataRead, huma.Operation{OperationID: "getFreshness", Method: http.MethodGet, Path: "/freshness", Tags: []string{"Dashboard"},
+		Summary: "Data freshness", Description: "When data last arrived and whether it is stale (same logic as the monitor endpoint)."},
 		func(ctx context.Context, _ *struct{}) (*body[FreshnessSummary], error) {
 			t, err := s.tenant(ctx)
 			if err != nil {
@@ -132,11 +136,19 @@ func (s *Server) registerData() {
 			if err != nil {
 				return nil, s.problem(ctx, err)
 			}
-			return ok(FreshnessSummary{Freshness: f, HasSleepData: sleep}), nil
+			version, err := t.Query.DataVersion(ctx)
+			if err != nil {
+				return nil, s.problem(ctx, err)
+			}
+			first, last, err := t.Query.WorkoutSpan(ctx)
+			if err != nil {
+				return nil, s.problem(ctx, err)
+			}
+			return ok(FreshnessSummary{Freshness: f, HasSleepData: sleep, DataVersion: version, WorkoutsFirstAt: first, WorkoutsLastAt: last}), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "listInsights", Method: http.MethodGet, Path: "/insights", Tags: []string{"Insights"},
-		Summary: "Insights", Description: "Rule-based insights (§8), most recent periods first, attention before positive. Without a range, all stored periods.",
+	register(s, dataRead, huma.Operation{OperationID: "listInsights", Method: http.MethodGet, Path: "/insights", Tags: []string{"Insights"},
+		Summary: "Insights", Description: "Rule-based insights, most recent periods first, attention before positive. Without a range, all stored periods.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *insightsInput) (*body[InsightList], error) {
 			t, err := s.tenant(ctx)
@@ -162,7 +174,7 @@ func (s *Server) registerData() {
 			return ok(out), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "getDay", Method: http.MethodGet, Path: "/days/{day}", Tags: []string{"Activity"},
+	register(s, dataRead, huma.Operation{OperationID: "getDay", Method: http.MethodGet, Path: "/days/{day}", Tags: []string{"Activity"},
 		Summary: "One day in detail", Description: "24-hour timeline: daily activity with hourly steps, heart summary and HR curve, stood hours, workouts, sleep and its stages.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *dayInput) (*body[*query.DayDetail], error) {
@@ -181,7 +193,7 @@ func (s *Server) registerData() {
 			return ok(dd), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "getCalendar", Method: http.MethodGet, Path: "/calendar", Tags: []string{"Activity"},
+	register(s, dataRead, huma.Operation{OperationID: "getCalendar", Method: http.MethodGet, Path: "/calendar", Tags: []string{"Activity"},
 		Summary: "Days with data", Description: "Which days have daily activity or workouts (default the last 366 days), plus the first and last day with data.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *RangeQuery) (*body[DataCalendar], error) {
@@ -200,8 +212,8 @@ func (s *Server) registerData() {
 			return ok(DataCalendar{From: r.From.String(), To: r.To.String(), FirstDay: first, LastDay: last, Items: list}), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "listDailyActivity", Method: http.MethodGet, Path: "/activity/daily", Tags: []string{"Activity"},
-		Summary: "Daily activity", Description: "Per day (default the last 30 days): steps, distance, calories, flights, exercise and stand, rings, sedentary stretch (§7.2).",
+	register(s, dataRead, huma.Operation{OperationID: "listDailyActivity", Method: http.MethodGet, Path: "/activity/daily", Tags: []string{"Activity"},
+		Summary: "Daily activity", Description: "Per day (default the last 30 days): steps, distance, calories, flights, exercise and stand, rings, sedentary stretch.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *activityInput) (*body[RangeItems[query.DailyActivity]], error) {
 			t, r, err := s.rangeOf(ctx, in.RangeQuery, 30)
@@ -215,8 +227,8 @@ func (s *Server) registerData() {
 			return ranged(r, list), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "listDailyHeart", Method: http.MethodGet, Path: "/heart/daily", Tags: []string{"Heart"},
-		Summary: "Daily heart metrics", Description: "Per day (default the last 90 days): HR range, resting and walking HR, HRV, VO2max, SpO2, respiration, wrist temperature (§7.3).",
+	register(s, dataRead, huma.Operation{OperationID: "listDailyHeart", Method: http.MethodGet, Path: "/heart/daily", Tags: []string{"Heart"},
+		Summary: "Daily heart metrics", Description: "Per day (default the last 90 days): HR range, resting and walking HR, HRV, VO2max, SpO2, respiration, wrist temperature.",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *RangeQuery) (*body[RangeItems[query.DailyHeart]], error) {
 			t, r, err := s.rangeOf(ctx, *in, 90)
@@ -230,7 +242,7 @@ func (s *Server) registerData() {
 			return ranged(r, list), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "listHeartEvents", Method: http.MethodGet, Path: "/heart/events", Tags: []string{"Heart"},
+	register(s, dataRead, huma.Operation{OperationID: "listHeartEvents", Method: http.MethodGet, Path: "/heart/events", Tags: []string{"Heart"},
 		Summary: "Heart notifications", Description: "High / low heart rate and irregular rhythm notifications, newest first (default the last 365 days).",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *RangeQuery) (*body[RangeItems[query.HeartEvent]], error) {
@@ -245,8 +257,8 @@ func (s *Server) registerData() {
 			return ranged(r, list), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "listSleepNights", Method: http.MethodGet, Path: "/sleep/nights", Tags: []string{"Sleep"},
-		Summary: "Nightly sleep", Description: "One row per night, keyed by the wake-up day (default the last 30 days, §7.4).",
+	register(s, dataRead, huma.Operation{OperationID: "listSleepNights", Method: http.MethodGet, Path: "/sleep/nights", Tags: []string{"Sleep"},
+		Summary: "Nightly sleep", Description: "One row per night, keyed by the wake-up day (default the last 30 days).",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *RangeQuery) (*body[RangeItems[query.SleepNight]], error) {
 			t, r, err := s.rangeOf(ctx, *in, 30)
@@ -260,8 +272,8 @@ func (s *Server) registerData() {
 			return ranged(r, list), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "getSleepRecovery", Method: http.MethodGet, Path: "/sleep/recovery", Tags: []string{"Sleep"},
-		Summary: "Next-day recovery", Description: "Mean resting HR and HRV on mornings after training days vs after rest days (default the last 30 days, UC6).",
+	register(s, dataRead, huma.Operation{OperationID: "getSleepRecovery", Method: http.MethodGet, Path: "/sleep/recovery", Tags: []string{"Sleep"},
+		Summary: "Next-day recovery", Description: "Mean resting HR and HRV on mornings after training days vs after rest days (default the last 30 days).",
 		Errors: []int{http.StatusBadRequest}},
 		func(ctx context.Context, in *RangeQuery) (*body[RecoveryReport], error) {
 			t, r, err := s.rangeOf(ctx, *in, 30)
@@ -275,7 +287,7 @@ func (s *Server) registerData() {
 			return ok(RecoveryReport{From: r.From.String(), To: r.To.String(), Recovery: *rec}), nil
 		})
 
-	register(s, sessionOnly, huma.Operation{OperationID: "getCoverage", Method: http.MethodGet, Path: "/coverage", Tags: []string{"Settings"},
+	register(s, dataRead, huma.Operation{OperationID: "getCoverage", Method: http.MethodGet, Path: "/coverage", Tags: []string{"Settings"},
 		Summary: "Data coverage", Description: "Date range and row count per data type, data sources and database size."},
 		func(ctx context.Context, _ *struct{}) (*body[*query.Coverage], error) {
 			t, err := s.tenant(ctx)

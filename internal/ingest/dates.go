@@ -7,7 +7,7 @@ import (
 )
 
 // parseDate parses Apple's "2006-01-02 15:04:05 -0700" into UTC epoch ms plus the original
-// offset in minutes (PAR-5). Dates without an offset are interpreted in loc.
+// offset in minutes. Dates without an offset are interpreted in loc.
 func parseDate(s string, loc *time.Location) (ms int64, offMin int, ok bool) {
 	if len(s) < 19 || s[4] != '-' || s[7] != '-' || s[10] != ' ' || s[13] != ':' || s[16] != ':' {
 		return 0, 0, false

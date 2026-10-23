@@ -118,6 +118,25 @@ func TestRegisterAndDuplicate(t *testing.T) {
 	}
 }
 
+// A cross-site page cannot sign visitors in or create accounts: the public writes need the CSRF
+// header too, even without a Content-Type.
+func TestPublicWritesNeedCSRF(t *testing.T) {
+	s := newTestServer(t, true, time.Now())
+	s.register("alice")
+	body := []byte(`{"username":"bob","password":"password1"}`)
+	for _, path := range []string{"/api/v1/auth/login", "/api/v1/auth/register"} {
+		if w := s.raw("POST", path, body, nil); w.Code != http.StatusForbidden {
+			t.Fatalf("%s without CSRF header: %d, want 403", path, w.Code)
+		}
+		if w := s.raw("POST", path, body, map[string]string{auth.CSRFHeader: "1", "Origin": "https://evil.example"}); w.Code != http.StatusForbidden {
+			t.Fatalf("%s from another origin: %d, want 403", path, w.Code)
+		}
+	}
+	if _, err := s.auth.UserByName(context.Background(), "bob"); err == nil {
+		t.Fatal("bob was created")
+	}
+}
+
 func TestUsersCannotSeeEachOthersData(t *testing.T) {
 	ctx := context.Background()
 	o := synth.Options{Start: time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), Days: 14, Loc: time.UTC, Seed: 1, HRIntervalSec: 1800, WorkoutHRIntervalSec: 30}

@@ -1,8 +1,7 @@
-// Tree-shaken ECharts (FE-6): only the modules Ritm uses are registered.
+// Tree-shaken ECharts: only the modules Ritm uses are registered.
 import * as echarts from 'echarts/core'
 import { BarChart, HeatmapChart, LineChart, ScatterChart } from 'echarts/charts'
 import {
-  DataZoomComponent,
   GridComponent,
   LegendComponent,
   MarkAreaComponent,
@@ -23,14 +22,13 @@ echarts.use([
   LegendComponent,
   MarkLineComponent,
   MarkAreaComponent,
-  DataZoomComponent,
   VisualMapComponent,
   CanvasRenderer,
 ])
 
 let registered = false
 
-/** Dark theme built from the design tokens (UI-D5). */
+/** Dark theme built from the design tokens. */
 export function ensureTheme() {
   if (registered) return
   registered = true

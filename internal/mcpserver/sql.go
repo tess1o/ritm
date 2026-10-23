@@ -12,9 +12,17 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
-const sqlMaxRows = 500
+const (
+	sqlMaxRows = 500
+	// sqlMaxValueBytes caps any one string or blob a query builds (SQLITE_LIMIT_LENGTH), so
+	// e.g. printf('%.*c', 1e9, 'x') fails instead of allocating a gigabyte.
+	sqlMaxValueBytes = 1 << 20
+	// sqlMaxResultBytes caps the result as a whole; rows past it are cut off as truncated.
+	sqlMaxResultBytes = 4 << 20
+)
 
 var sqlTimeout = 5 * time.Second // a variable for tests
 
@@ -27,7 +35,7 @@ var (
 )
 
 // checkSQL gives a clear error for statements that are not a single read-only query. It is a
-// convenience: the authorizer in querySQL is what actually enforces it (SEC-2).
+// convenience: the authorizer in querySQL is what actually enforces it.
 func checkSQL(q string) error {
 	bare := sqlStrings.ReplaceAllString(sqlComments.ReplaceAllString(q, " "), "''")
 	bare = strings.TrimSpace(bare)
@@ -123,6 +131,15 @@ func runSQL(ctx context.Context, db *sql.DB, q string) (*sqlResult, error) {
 			return r.RegisterAuthorizer(fn)
 		})
 	}
+	prevLen, err := sqlite.Limit(conn, sqlite3.SQLITE_LIMIT_LENGTH, sqlMaxValueBytes)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if _, err := sqlite.Limit(conn, sqlite3.SQLITE_LIMIT_LENGTH, prevLen); err != nil {
+			conn.Raw(func(any) error { return driver.ErrBadConn }) // drop the connection from the pool
+		}
+	}()
 	if err := setAuth(readOnlyAuthorizer); err != nil {
 		return nil, err
 	}
@@ -142,8 +159,9 @@ func runSQL(ctx context.Context, db *sql.DB, q string) (*sqlResult, error) {
 		return nil, err
 	}
 	res := &sqlResult{Columns: cols, Rows: [][]any{}}
+	size := 0
 	for rows.Next() {
-		if len(res.Rows) == sqlMaxRows {
+		if len(res.Rows) == sqlMaxRows || size > sqlMaxResultBytes {
 			res.Truncated = true
 			break
 		}
@@ -156,9 +174,13 @@ func runSQL(ctx context.Context, db *sql.DB, q string) (*sqlResult, error) {
 			return nil, err
 		}
 		for i, v := range vals {
-			if b, ok := v.([]byte); ok {
-				vals[i] = fmt.Sprintf("<blob %d bytes>", len(b))
+			switch v := v.(type) {
+			case []byte:
+				vals[i] = fmt.Sprintf("<blob %d bytes>", len(v))
+			case string:
+				size += len(v)
 			}
+			size += 8
 		}
 		res.Rows = append(res.Rows, vals)
 	}

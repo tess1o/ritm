@@ -18,7 +18,7 @@ type source struct {
 	close func() error
 }
 
-// openSource opens export.zip (locating the export.xml entry, PAR-1) or a bare export.xml.
+// openSource opens export.zip (locating the export.xml entry) or a bare export.xml.
 func openSource(path string) (*source, error) {
 	f, err := os.Open(path)
 	if err != nil {

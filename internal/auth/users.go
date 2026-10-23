@@ -94,10 +94,9 @@ func (s *Service) EnsureUser(ctx context.Context, username, password string) (cr
 // Register creates an account on behalf of a visitor and starts a session. Every attempt counts
 // against the per-IP registration limit.
 func (s *Service) Register(ctx context.Context, ip, username, password string) (string, User, error) {
-	if !s.regLimiter.Allow(ip) {
+	if !s.regLimiter.Take(ip) {
 		return "", User{}, ErrRateLimited
 	}
-	s.regLimiter.Fail(ip)
 	u, err := s.CreateUser(ctx, username, password)
 	if err != nil {
 		return "", User{}, err
@@ -112,20 +111,21 @@ func (s *Service) Register(ctx context.Context, ip, username, password string) (
 // CheckPassword re-authenticates a signed-in user before a sensitive action. Failures count
 // against the login rate limit of ip.
 func (s *Service) CheckPassword(ctx context.Context, ip string, userID int64, password string) error {
-	if !s.limiter.Allow(ip) {
+	if !s.limiter.Take(ip) {
 		return ErrRateLimited
 	}
 	var hash string
 	if err := s.db.W.QueryRowContext(ctx, "SELECT password_hash FROM users WHERE id = ?", userID).Scan(&hash); err != nil {
+		s.limiter.Refund(ip)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrUserNotFound
 		}
 		return err
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-		s.limiter.Fail(ip)
 		return ErrWrongPassword
 	}
+	s.limiter.Refund(ip)
 	return nil
 }
 

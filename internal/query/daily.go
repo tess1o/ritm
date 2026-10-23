@@ -198,7 +198,7 @@ type RecoveryGroup struct {
 	HRVMs        *float64 `json:"hrv_sdnn_ms"`
 }
 
-// Recovery compares the mornings after training days with those after rest days (UC6).
+// Recovery compares the mornings after training days with those after rest days.
 type Recovery struct {
 	AfterTraining RecoveryGroup `json:"after_training"`
 	AfterRest     RecoveryGroup `json:"after_rest"`

@@ -74,10 +74,18 @@ use the address the page was opened at), and an allowed `Origin` for writes when
 Leave it unset while you reach Ritm over plain `http://`: with an `https://` value the browser drops the cookie and
 sign-in fails.
 
-The login and API-key rate limits use the client IP. By default Ritm believes `X-Forwarded-For` from loopback and
-private addresses, which covers a proxy on the same host or Docker network. If clients on your LAN can reach Ritm
-directly, set `RITM_TRUSTED_PROXIES` to your proxy's address (or `none`), so a client cannot pick its own IP. Login
-failures are also limited per username, whatever the IP.
+With the proxy on the same host, publish the port on loopback only (`ports: [ "127.0.0.1:8080:8080" ]`), so
+Ritm can't be reached around the proxy. Docker's published ports bypass host firewalls such as ufw.
+
+The login and API-key rate limits use the client IP. By default Ritm believes `X-Forwarded-For` only from
+loopback, which covers nginx or Caddy running on the host. If the proxy runs in another container, set
+`RITM_TRUSTED_PROXIES` to its Docker network (e.g. `172.18.0.0/16`). Ritm logs a warning the first time it ignores
+the header from a private address. Private addresses aren't trusted by default because with some Docker
+port-forwarding setups (IPv6, rootless Docker, swarm) every internet client arrives from one, and could then pick its
+own IP. Login failures are also limited per username, whatever the IP.
+
+Ritm compresses its responses (gzip) and sends `Strict-Transport-Security` when `RITM_BASE_URL` is `https://`, so
+the proxy doesn't need to add either.
 
 ## Configuration
 
@@ -97,7 +105,7 @@ All settings are environment variables.
 | `RITM_DELTA_WINDOW`                     | `168h`             | Window re-read before the high-water mark on delta imports.                                                                                         |
 | `RITM_STALE_AFTER`                      | `336h`             | Default no-new-data threshold for monitoring. Each user can override it in Settings.                                                                |
 | `RITM_LOG_LEVEL`                        | `info`             | `debug`, `info`, `warn` or `error`. Logs are JSON on stderr.                                                                                        |
-| `RITM_TRUSTED_PROXIES`                  | loopback + private | Peers whose `X-Forwarded-For` is believed: comma-separated IPs/CIDRs (e.g. `172.18.0.0/16`), or `none`.                                             |
+| `RITM_TRUSTED_PROXIES`                  | loopback           | Peers whose `X-Forwarded-For` is believed: comma-separated IPs/CIDRs (e.g. `172.18.0.0/16`), or `none`.                                             |
 
 Durations accept Go syntax (`72h`) plus a `d` unit (`14d`).
 
@@ -122,7 +130,7 @@ Other commands: `ritm import --user NAME [--full] FILE`, `ritm recompute --user 
 ## AI assistants (MCP)
 
 Ritm serves the Model Context Protocol over streamable HTTP at `/mcp`. Clients authenticate with
-`Authorization: Bearer <key>` using an `mcp`-scoped key, and each key reads only its owner's
+`Authorization: Bearer <key>` using a `read` key, and each key reads only its owner's
 database. The **AI assistants** page in the app walks through it: pick or create a key, then copy a
 ready-made setup for Claude Code, Claude Desktop, VS Code, Cursor or another client. For example:
 
@@ -157,13 +165,14 @@ Conventions:
 - Ranges longer than three months are returned per week or per month.
 - Lists are capped and flagged `truncated`.
 
-`query_sql` is off by default; each user can turn on "Allow AI assistants to run SQL queries" in
-Settings. It runs on a read-only connection (`mode=ro`, `query_only`). A SQLite authorizer denies
+`query_sql` is off by default; each user can turn on read-only SQL queries in Settings → Connections. The switch
+applies to all of that user's `read` keys. It runs on a read-only connection (`mode=ro`, `query_only`). A SQLite authorizer denies
 everything except reading the user's own database, including `PRAGMA`, `ATTACH`, writes and
 extension loading. Sorts and temporary results spill to a temporary file rather than memory.
 
-`mcp` keys are read-only and work only on `/mcp`. The server is stateless, so every request is tied to the
-key that sent it. Data an assistant reads becomes part of the conversation with that assistant's
+`read` keys can't change anything. The same key also works for the REST API (see
+[Reading your data from a script](#reading-your-data-from-a-script)). The MCP server is stateless, so every request
+is tied to the key that sent it. Data an assistant reads becomes part of the conversation with that assistant's
 provider.
 
 ## REST API
@@ -176,9 +185,9 @@ reference at `/api/v1/docs`.
 - Collections are `{"items": [...]}`. Ranged reads take `period` (e.g. `last_30d`, `2026-09-01..2026-09-30`)
   or `from`/`to`. Errors are RFC 9457 problem details.
 - Browser sessions use the `ritm_session` cookie and must send `X-Ritm-CSRF: 1` on writes.
-- API keys (`Authorization: Bearer ritm_…`, created under Settings → API keys) have one scope:
-  `ingest` uploads exports and reads their status, `monitor` reads data freshness, and `mcp` is
-  for the MCP server.
+- API keys (`Authorization: Bearer ritm_…`, created under Settings → Connections) have one scope:
+  `read` reads health data over REST and MCP, `ingest` uploads exports and reads their status, and
+  `monitor` reads data freshness. No key can change data, settings or keys.
 
 After changing a handler or a response type, run `make openapi`. It regenerates
 `docs/openapi.yaml` and the frontend's TypeScript types (`web/src/lib/api-schema.d.ts`), and CI
@@ -220,16 +229,22 @@ Add `?full=true` to the upload to ignore earlier imports and re-read the whole f
 
 ### Reading your data from a script
 
-Health data has no API-key scope. Sign in like the browser does and keep the session cookie:
+Create a key under Settings → Connections (*AI assistant or script*). It has the `read` scope and
+works on every data read below. Send it as a bearer token:
 
 ```sh
-curl -c ritm.cookies -H 'Content-Type: application/json' \
-  -d '{"username":"alice","password":"…"}' https://ritm.example/api/v1/auth/login
+KEY=ritm_…
+curl -s -H "Authorization: Bearer $KEY" 'https://ritm.example/api/v1/overview?period=last_7d'
 ```
 
-Pass `-b ritm.cookies` on later calls. The session lasts `RITM_SESSION_TTL`. Writes (`POST`, `PUT`,
-`DELETE`) also need `-H 'X-Ritm-CSRF: 1'`. Without it they fail with `403` and
-`missing CSRF header or cross-origin request`.
+A read key can't change anything. Writes such as rating a workout need a browser session. To script those, sign in
+like the browser does and keep the cookie. Sign-in and every write need `-H 'X-Ritm-CSRF: 1'`, or they fail with
+`403` and `missing CSRF header or cross-origin request`:
+
+```sh
+curl -c ritm.cookies -H 'X-Ritm-CSRF: 1' -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"…"}' https://ritm.example/api/v1/auth/login
+```
 
 The most useful endpoints (all under `/api/v1`):
 
@@ -241,11 +256,11 @@ The most useful endpoints (all under `/api/v1`):
 | `GET /sleep/nights`             | Per night: time in bed and asleep, core/deep/REM/awake minutes, bedtime and wake time                                                                      |
 | `GET /workouts`                 | Workouts, newest first, with duration, distance, kcal, HR, % in zone 3+, load. Filter with `type` (see `GET /workout-types`) and `limit`                   |
 | `GET /workouts/{id}`            | One workout: HR zones, events and pauses, RPE and notes, and the previous workout of the same type                                                         |
-| `PUT /workouts/{id}/annotation` | Set RPE (1–10 or `null`) and notes. Both fields are required                                                                                               |
+| `PUT /workouts/{id}/annotation` | Set RPE (1–10 or `null`) and notes. Both fields are required. Needs a session                                                                             |
 | `GET /days/{day}`               | One day: hourly steps, HR curve, workouts, sleep stages. `day` is `YYYY-MM-DD`, `today` or `yesterday`                                                     |
 | `GET /training/load`            | Daily load with fitness (CTL), fatigue (ATL), form (TSB) and ACWR                                                                                          |
 | `GET /insights`                 | Insights. Filter with `category`, `polarity`, `kind`, and `latest=true` for the newest period per rule                                                     |
-| `POST /api-keys`                | Create a key: `{"name": "…", "scope": "ingest" \| "monitor" \| "mcp"}`. The `secret` is shown only once                                                    |
+| `POST /api-keys`                | Create a key: `{"name": "…", "scope": "read" \| "ingest" \| "monitor"}`. The `secret` is shown only once. Needs a session                                 |
 
 Ranged endpoints take `period` (`last_7d`, `last_<n>d`, `this_month`, `last_month`, `ytd`,
 `YYYY-MM-DD` or `FROM..TO`) or `from`/`to`. Without them they use a default, such as the last
@@ -253,31 +268,64 @@ Ranged endpoints take `period` (`last_7d`, `last_<n>d`, `this_month`, `last_mont
 
 ```sh
 # This week vs your baseline
-curl -s -b ritm.cookies 'https://ritm.example/api/v1/overview?period=last_7d' \
+curl -s -H "Authorization: Bearer $KEY" 'https://ritm.example/api/v1/overview?period=last_7d' \
   | jq '{steps: .steps_per_day, resting_hr: .resting_hr_bpm}'
 # {
-#   "steps":      {"value": 4411, "baseline": 6318.5, "delta_pct": -30.2, "days": 6},
-#   "resting_hr": {"value": 68.8, "baseline": 73.1,   "delta_pct": -5.9,  "days": 6}
+#   "steps":      {"value": 9000, "baseline": 8000, "delta_pct": 12.5, "days": 7},
+#   "resting_hr": {"value": 60,   "baseline": 62,   "delta_pct": -3.2, "days": 7}
 # }
 
 # One month of activity as CSV
-curl -s -b ritm.cookies 'https://ritm.example/api/v1/activity/daily?period=2026-09-01..2026-09-30' \
+curl -s -H "Authorization: Bearer $KEY" 'https://ritm.example/api/v1/activity/daily?period=2026-09-01..2026-09-30' \
   | jq -r '.items[] | [.day, .steps, .active_kcal, .exercise_min] | @csv'
 
 # This year's runs
-curl -s -b ritm.cookies 'https://ritm.example/api/v1/workouts?period=ytd&type=HKWorkoutActivityTypeRunning' \
+curl -s -H "Authorization: Bearer $KEY" 'https://ritm.example/api/v1/workouts?period=ytd&type=HKWorkoutActivityTypeRunning' \
   | jq -c '.items[] | {day, minutes: (.duration_s/60|round), distance_m, avg_hr_bpm, load}'
 
-# Rate a workout
+# Rate a workout (a write: session cookie from the sign-in above)
 curl -b ritm.cookies -X PUT -H 'X-Ritm-CSRF: 1' -H 'Content-Type: application/json' \
   -d '{"rpe": 7, "notes": "Heavy legs"}' https://ritm.example/api/v1/workouts/195/annotation
 
 # What needs attention right now
-curl -s -b ritm.cookies 'https://ritm.example/api/v1/insights?latest=true&polarity=attention' \
+curl -s -H "Authorization: Bearer $KEY" 'https://ritm.example/api/v1/insights?latest=true&polarity=attention' \
   | jq -r '.items[].title'
 ```
 
 The browsable reference at `/api/v1/docs` lists every endpoint and field.
+
+### Workouts for other apps
+
+Apps that show workouts next to their own data, for example on a map or a timeline, can use a
+`read` key and these parts of the workout API:
+
+- **Identity.** Each workout has a `key` (`activity_type|start_ms|end_ms`). Unlike `id`, it stays the same after a data
+  reset.
+- **Kind.** `category` is one of `walk`, `run`, `hike`, `cycle`, `swim`, `row`, `paddle`, `sail`, `ski`, `strength`,
+  `cardio` or `other`. `distance_based` says whether the activity covers a distance.
+- **Location.** For workouts with a GPS route, `route` has the start and end points, the bounds and the number of points.
+  It is `null` otherwise.
+- **Selection.**
+  - `start`/`end` (RFC 3339) match workouts overlapping an exact window, instead of `period`/`from`/`to`.
+  - `category`, `type`, `near=lat,lon&radius_m=` (where the route starts) and `bbox=minLon,minLat,maxLon,maxLat` (what
+    the route crosses) filter the list.
+  - Pages are newest first: pass `next_cursor` as `cursor`.
+- **Tracks.** `GET /workouts/routes` takes the same filters and returns many downsampled tracks at once as
+  `[lat, lon, t_ms]` arrays. `GET /workouts/{id}/route` has pace and elevation for one workout.
+- **Caching.** Data reads send an `ETag`; revalidate with `If-None-Match` and get `304` while nothing changed.
+  `GET /freshness` adds `data_version`, which goes up with every change, and when the first and last workouts are.
+- **Revoked keys.** A revoked key is rate-limited on its own, so it doesn't block other keys used from the same server.
+
+```sh
+# Runs and walks that started within 200 m of a place, last year
+curl -s -H "Authorization: Bearer $KEY" \
+  'https://ritm.example/api/v1/workouts?period=last_365d&near=50.4501,30.5234&radius_m=200' \
+  | jq -c '.items[] | {key, category, day, start: .route.start}'
+
+# Tracks of one week, 150 points each
+curl -s -H "Authorization: Bearer $KEY" \
+  'https://ritm.example/api/v1/workouts/routes?start=2026-10-12T00:00:00Z&end=2026-10-19T00:00:00Z'
+```
 
 ## Monitoring with Uptime Kuma
 

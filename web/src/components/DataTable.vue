@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends object">
-// Table on wide screens, card list on phones (UI-M5).
+// Table on wide screens, card list on phones.
 export interface Column<R> {
   key: string
   label: string

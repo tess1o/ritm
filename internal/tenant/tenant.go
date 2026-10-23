@@ -53,6 +53,12 @@ func Open(ctx context.Context, cfg *config.Config, log *slog.Logger, clk clock.C
 		db.Close()
 		return nil, fmt.Errorf("read settings of %s: %w", u.Username, err)
 	}
+	if n, err := ingest.BackfillRouteLocations(ctx, db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("locate routes of %s: %w", u.Username, err)
+	} else if n > 0 {
+		log.Info("route locations filled in", "user", u.Username, "routes", n)
+	}
 	zone := days.NewZone(st.Location(cfg.TZ))
 	log = log.With("user", u.Username)
 	eng := derive.NewEngine(db, zone, clk, log)
@@ -266,7 +272,7 @@ func (r *Registry) removeData(u auth.User) {
 	}
 }
 
-// StopImports refuses new tenants and cancels running imports (they are marked failed, NFR-7),
+// StopImports refuses new tenants and cancels running imports (they are marked failed),
 // waiting until they stop. Call it before the HTTP server shuts down, so progress streams end.
 func (r *Registry) StopImports(ctx context.Context) {
 	r.mu.Lock()

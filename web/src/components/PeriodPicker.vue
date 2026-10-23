@@ -181,7 +181,7 @@ function toggleCompare() {
 }
 .switch[aria-checked='true'] .knob {
   transform: translateX(12px);
-  background: #0b1020;
+  background: var(--on-accent);
 }
 .cal {
   margin-left: 5px;

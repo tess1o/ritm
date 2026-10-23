@@ -76,7 +76,7 @@ func OpenPath(ctx context.Context, path string, schema fs.FS) (*DB, error) {
 		return nil, err
 	}
 	// Every connection has its own page cache (see dsn), so few are kept idle and idle readers
-	// are closed after a while: memory stays within NFR-1/NFR-4 with many users.
+	// are closed after a while: memory stays within the import and idle budgets with many users.
 	w.SetMaxOpenConns(4)
 	w.SetMaxIdleConns(2)
 	w.SetConnMaxIdleTime(2 * time.Minute)
@@ -209,8 +209,22 @@ func SetSetting(ctx context.Context, q Querier, key string, v any) error {
 	if err != nil {
 		return err
 	}
-	_, err = q.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES (?, ?)
-		ON CONFLICT (key) DO UPDATE SET value = excluded.value`, key, string(raw))
+	if _, err = q.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES (?, ?)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`, key, string(raw)); err != nil {
+		return err
+	}
+	return BumpDataVersion(ctx, q)
+}
+
+// Placeholders returns n comma-separated "?" for an IN (...) list.
+func Placeholders(n int) string {
+	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
+}
+
+// BumpDataVersion marks a change to a user's data (data_freshness.data_version), so cached API
+// responses for it are revalidated. Call it in the transaction that makes the change.
+func BumpDataVersion(ctx context.Context, q Querier) error {
+	_, err := q.ExecContext(ctx, "UPDATE data_freshness SET data_version = data_version + 1 WHERE id = 1")
 	return err
 }
 

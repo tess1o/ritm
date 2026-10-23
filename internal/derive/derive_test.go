@@ -47,7 +47,7 @@ func opts() synth.Options {
 func TestDailyActivityUsesWatchPriority(t *testing.T) {
 	db, _ := setup(t, opts())
 	ctx := context.Background()
-	// Expected: Watch value per hour, iPhone only in hours without Watch data (SRC-2).
+	// Expected: Watch value per hour, iPhone only in hours without Watch data.
 	var watchSteps, daily float64
 	db.RO.QueryRowContext(ctx, `SELECT sum(v) FROM (
 		SELECT local_hour, coalesce(max(CASE WHEN source_name LIKE 'Apple Watch%' THEN value END), max(value)) AS v

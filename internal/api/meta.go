@@ -10,7 +10,7 @@ import (
 	"ritm/internal/mcpserver"
 )
 
-// Health is the liveness report of GET /healthz (MON-11).
+// Health is the liveness report of GET /healthz.
 type Health struct {
 	Status  string `json:"status" enum:"ok,error"`
 	Version string `json:"version"`
@@ -23,14 +23,14 @@ type healthOutput struct {
 
 // McpInfo describes the MCP server for the AI-assistants page.
 type McpInfo struct {
-	Path    string             `json:"path" example:"/mcp" doc:"Path of the MCP endpoint (streamable HTTP, Bearer key with scope mcp)"`
+	Path    string             `json:"path" example:"/mcp" doc:"Path of the MCP endpoint (streamable HTTP, Bearer key with scope read)"`
 	BaseURL string             `json:"base_url" doc:"RITM_BASE_URL, empty when unset"`
 	Catalog *mcpserver.Catalog `json:"catalog"`
 }
 
 func (s *Server) registerMeta() {
 	op := huma.Operation{OperationID: "health", Method: http.MethodGet, Path: "/healthz", Tags: []string{"Meta"},
-		Summary: "Liveness probe", Description: "200 when the server is up and the accounts database answers, 503 otherwise. No authentication (MON-11).",
+		Summary: "Liveness probe", Description: "200 when the server is up and the accounts database answers, 503 otherwise. No authentication.",
 		Responses: map[string]*huma.Response{"503": {Description: "Database unavailable"}}}
 	describe(&op, public)
 	huma.Register(s.api, op, func(ctx context.Context, _ *struct{}) (*healthOutput, error) {

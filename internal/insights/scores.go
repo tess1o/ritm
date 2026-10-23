@@ -8,7 +8,7 @@ import (
 	"ritm/internal/mathx"
 )
 
-// Score is a 0–100 display-only index with an explanation of its inputs (§8.4).
+// Score is a 0–100 display-only index with an explanation of its inputs.
 type Score struct {
 	Value  *float64       `json:"value"`
 	Inputs map[string]any `json:"inputs"`

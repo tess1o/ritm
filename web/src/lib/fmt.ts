@@ -1,4 +1,4 @@
-// Formatting helpers (FE-8: native Intl only). Metric units throughout.
+// Formatting helpers (native Intl only). Metric units throughout.
 import { ref } from 'vue'
 
 // The user's time zone (Settings, else RITM_TZ). Local days are computed by the server in it, so
@@ -127,10 +127,15 @@ export function addDays(day: string, n: number): string {
   return dayString(d)
 }
 
+/** The local day of an instant in the server's zone, YYYY-MM-DD. */
+export function dayOf(v: string | number): string {
+  const p = zonedParts(new Date(v).getTime())
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+}
+
 /** Today in the server's zone, YYYY-MM-DD. */
 export function today(): string {
-  const p = zonedParts(Date.now())
-  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+  return dayOf(Date.now())
 }
 
 const dfShort = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })

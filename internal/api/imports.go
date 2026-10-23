@@ -29,9 +29,9 @@ type Import struct {
 }
 
 // uploadInput streams the request body itself: it has no Body field, so Huma does not read
-// (and buffer) the upload, which can be several GB (ING-1).
+// (and buffer) the upload, which can be several GB.
 type uploadInput struct {
-	Full     bool   `query:"full" doc:"Full re-import: ignore what was imported before (DUP-3)"`
+	Full     bool   `query:"full" doc:"Full re-import: ignore what was imported before"`
 	FileName string `header:"X-File-Name" doc:"File name, URL-encoded (for raw bodies; multipart uses the part's file name)" example:"export.zip"`
 	req      *http.Request
 	w        http.ResponseWriter
@@ -77,7 +77,7 @@ func (s *Server) registerImports() {
 		}}
 
 	register(s, sessionOnly, huma.Operation{OperationID: "listImports", Method: http.MethodGet, Path: "/imports", Tags: tags,
-		Summary: "Import history", Description: "The 50 most recent imports with their summaries (PRG-2), newest first."},
+		Summary: "Import history", Description: "The 50 most recent imports with their summaries, newest first."},
 		func(ctx context.Context, _ *struct{}) (*body[Items[ingest.ImportRow]], error) {
 			t, err := s.tenant(ctx)
 			if err != nil {
@@ -91,7 +91,7 @@ func (s *Server) registerImports() {
 		})
 
 	register(s, sessionOrKey(auth.ScopeIngest), huma.Operation{OperationID: "getImport", Method: http.MethodGet, Path: "/imports/{id}", Tags: tags,
-		Summary: "Import status", Description: "Status and summary of one import, with live progress while it runs (polling fallback of PRG-1).",
+		Summary: "Import status", Description: "Status and summary of one import, with live progress while it runs (a polling fallback for the progress stream).",
 		Errors: []int{http.StatusNotFound}},
 		func(ctx context.Context, in *importPath) (*body[Import], error) {
 			t, err := s.tenant(ctx)
@@ -106,7 +106,7 @@ func (s *Server) registerImports() {
 		})
 
 	events := huma.Operation{OperationID: "streamImportEvents", Method: http.MethodGet, Path: "/imports/{id}/events", Tags: tags,
-		Summary: "Import progress stream", Description: "Server-sent events (PRG-1): `progress` while the import runs, then one `done` with the final import. " +
+		Summary: "Import progress stream", Description: "Server-sent events: `progress` while the import runs, then one `done` with the final import. " +
 			"For an import that is not running, `done` (or `error`) is sent at once. Comments keep the connection alive every 15 s."}
 	describe(&events, sessionOrKey(auth.ScopeIngest))
 	sse.Register(s.v1, events, map[string]any{"progress": ingest.Progress{}, "done": Import{}, "error": huma.ErrorModel{}},
@@ -161,7 +161,7 @@ func (s *Server) importStatus(ctx context.Context, q *query.Service, m *ingest.M
 }
 
 // uploadImport streams the request body (raw or the first multipart file) to RITM_DATA_DIR/tmp
-// and starts a background import (ING-1, ING-2).
+// and starts a background import.
 func (s *Server) uploadImport(ctx context.Context, in *uploadInput) (*importCreated, error) {
 	t, err := s.tenant(ctx)
 	if err != nil {

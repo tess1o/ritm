@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useFreshness } from './useFreshness'
 
-// Sleep & recovery is hidden when there is no sleep data (§12, open question 1). The flag comes
+// Sleep & recovery is hidden when there is no sleep data. The flag comes
 // with the freshness summary the app chrome already loads.
 export function useSleepAvailable() {
   const fresh = useFreshness()

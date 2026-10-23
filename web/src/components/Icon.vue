@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Inline SVG icons (FE-7), a small subset adapted from Lucide (ISC licence).
+// Inline SVG icons, a small subset adapted from Lucide (ISC licence).
 import { computed } from 'vue'
 
 const PATHS: Record<string, string> = {

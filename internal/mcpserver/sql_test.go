@@ -65,10 +65,19 @@ func TestRunSQLAuthorizer(t *testing.T) {
 	if err != nil || res.RowCount != 1 {
 		t.Fatalf("plain select: %v %+v", err, res)
 	}
-	// The connection goes back to the pool without the authorizer.
+	// Huge values fail instead of being built in memory.
+	for _, q := range []string{"SELECT printf('%.*c', 100000000, 'x')", "SELECT randomblob(100000000)"} {
+		if _, err := runSQL(ctx, db.RO, q); err == nil || !strings.Contains(err.Error(), "too big") {
+			t.Errorf("%q: %v, want a too-big error", q, err)
+		}
+	}
+	// The connection goes back to the pool without the authorizer or the length limit.
 	var n int
 	if err := db.RO.QueryRowContext(ctx, "SELECT count(*) FROM pragma_table_info('settings')").Scan(&n); err != nil || n == 0 {
 		t.Fatalf("pool connection still restricted: %v", err)
+	}
+	if err := db.RO.QueryRowContext(ctx, "SELECT length(randomblob(4000000))").Scan(&n); err != nil || n != 4000000 {
+		t.Fatalf("pool connection keeps the length limit: %d %v", n, err)
 	}
 
 	sqlTimeout = 200 * time.Millisecond

@@ -87,7 +87,7 @@ type Handler interface {
 	Summary(*Summary)
 }
 
-// ParseError is an XML syntax error that fails the import (PAR-8).
+// ParseError is an XML syntax error that fails the import.
 type ParseError struct {
 	Offset int64
 	Err    error
@@ -96,24 +96,26 @@ type ParseError struct {
 func (e *ParseError) Error() string { return fmt.Sprintf("XML error at byte %d: %v", e.Offset, e.Err) }
 func (e *ParseError) Unwrap() error { return e.Err }
 
-// Parser walks export.xml with RawToken (PAR-3), never building a DOM.
+// Parser walks export.xml with RawToken, never building a DOM.
 type Parser struct {
 	dec   *xml.Decoder
+	guard *tokenGuard
 	loc   *time.Location
 	types typeSet
 	h     Handler
 	depth int
 
 	Skipped  map[string]int // malformed elements per type
-	Problems []string       // details of the first malformed elements (PRG-2)
+	Problems []string       // details of the first malformed elements
 	Ignored  int            // records of types Ritm does not ingest
 	Sources  map[string]*SourceInfo
 }
 
 func NewParser(r io.Reader, loc *time.Location, types typeSet, h Handler) *Parser {
-	dec := xml.NewDecoder(r)
+	guard := &tokenGuard{r: r}
+	dec := xml.NewDecoder(guard)
 	dec.Strict = true
-	return &Parser{dec: dec, loc: loc, types: types, h: h,
+	return &Parser{dec: dec, guard: guard, loc: loc, types: types, h: h,
 		Skipped: map[string]int{}, Sources: map[string]*SourceInfo{}}
 }
 
@@ -122,7 +124,7 @@ func (p *Parser) Run(stop func() bool) error {
 		if n&0x3ff == 0 && stop != nil && stop() {
 			return errCanceled
 		}
-		tok, err := p.dec.RawToken()
+		tok, err := p.token()
 		if errors.Is(err, io.EOF) {
 			if p.depth != 0 {
 				return &ParseError{Offset: p.dec.InputOffset(), Err: errors.New("unexpected end of file")}
@@ -168,10 +170,17 @@ func (p *Parser) Run(stop func() bool) error {
 
 var errCanceled = errors.New("import canceled")
 
+// token reads the next token and marks its end for the token size limit.
+func (p *Parser) token() (xml.Token, error) {
+	tok, err := p.dec.RawToken()
+	p.guard.mark = p.dec.InputOffset()
+	return tok, err
+}
+
 // maxProblems caps the malformed-element details kept for the import summary.
 const maxProblems = 20
 
-// reject counts a malformed element (PAR-8) and keeps its details for the first few.
+// reject counts a malformed element and keeps its details for the first few.
 func (p *Parser) reject(typ, reason string) {
 	p.Skipped[typ]++
 	if len(p.Problems) < maxProblems {
@@ -183,7 +192,7 @@ func (p *Parser) reject(typ, reason string) {
 func (p *Parser) skip() error {
 	target := p.depth - 1
 	for p.depth > target {
-		tok, err := p.dec.RawToken()
+		tok, err := p.token()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
@@ -205,7 +214,7 @@ func (p *Parser) skip() error {
 func (p *Parser) children(fn func(xml.StartElement) error) error {
 	base := p.depth
 	for {
-		tok, err := p.dec.RawToken()
+		tok, err := p.token()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				err = io.ErrUnexpectedEOF
@@ -258,7 +267,7 @@ func (p *Parser) record(t xml.StartElement) error {
 	}
 	keepMeta := !metadataSkipTypes[typ] && !p.types.cumulative[typ]
 	err := p.children(func(c xml.StartElement) error {
-		if keepMeta && c.Name.Local == "MetadataEntry" {
+		if keepMeta && c.Name.Local == "MetadataEntry" && len(r.Meta) < maxChildren {
 			r.Meta = append(r.Meta, [2]string{attr(c, "key"), attr(c, "value")})
 		}
 		return nil
@@ -281,7 +290,7 @@ func (p *Parser) record(t xml.StartElement) error {
 		return nil
 	}
 	if r.Unit == "" && strings.HasPrefix(typ, "HKCategoryTypeIdentifier") {
-		// category records (PAR-7): the value is an enum identifier
+		// category records: the value is an enum identifier
 		r.Category = value
 	} else {
 		v, err := strconv.ParseFloat(value, 64)
@@ -330,20 +339,22 @@ func (p *Parser) workout(t xml.StartElement) error {
 	err := p.children(func(c xml.StartElement) error {
 		switch c.Name.Local {
 		case "MetadataEntry":
-			w.Meta[attr(c, "key")] = attr(c, "value")
+			if len(w.Meta) < maxChildren {
+				w.Meta[attr(c, "key")] = attr(c, "value")
+			}
 		case "WorkoutEvent":
-			if ev, ok := p.workoutEvent(c); ok {
+			if ev, ok := p.workoutEvent(c); ok && len(w.Events) < maxChildren {
 				w.Events = append(w.Events, ev)
 			}
 		case "WorkoutStatistics":
-			if st, ok := p.workoutStat(c); ok {
+			if st, ok := p.workoutStat(c); ok && len(w.Stats) < maxChildren {
 				w.Stats = append(w.Stats, st)
 			}
 		case "WorkoutActivity":
 			return p.workoutActivity(c, w)
 		case "WorkoutRoute":
 			return p.children(func(rc xml.StartElement) error {
-				if rc.Name.Local == "FileReference" {
+				if rc.Name.Local == "FileReference" && len(w.RoutePaths) < maxRouteFiles {
 					if path := attr(rc, "path"); path != "" {
 						w.RoutePaths = append(w.RoutePaths, path)
 					}
@@ -458,17 +469,17 @@ func (p *Parser) workoutActivity(c xml.StartElement, w *Workout) error {
 	err := p.children(func(cc xml.StartElement) error {
 		switch cc.Name.Local {
 		case "WorkoutStatistics":
-			if st, ok := p.workoutStat(cc); ok {
+			if st, ok := p.workoutStat(cc); ok && len(wa.Stats) < maxChildren {
 				wa.Stats = append(wa.Stats, st)
 			}
 		case "WorkoutEvent":
-			if ev, ok := p.workoutEvent(cc); ok {
+			if ev, ok := p.workoutEvent(cc); ok && len(w.Events) < maxChildren {
 				w.Events = append(w.Events, ev)
 			}
 		}
 		return nil
 	})
-	if err == nil && wa.StartMS > 0 && wa.EndMS >= wa.StartMS {
+	if err == nil && wa.StartMS > 0 && wa.EndMS >= wa.StartMS && len(w.Activities) < maxChildren {
 		w.Activities = append(w.Activities, wa)
 	}
 	return err

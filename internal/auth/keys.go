@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ScopeMCP     = "mcp"     // the MCP server at /mcp
+	ScopeRead    = "read"    // health data: the REST data reads and the MCP server at /mcp
 	ScopeMonitor = "monitor" // GET /api/v1/monitor/freshness (Uptime Kuma)
 	ScopeIngest  = "ingest"  // upload exports and read their import status (e.g. iPhone Shortcuts)
 
@@ -27,15 +27,17 @@ const (
 var (
 	ErrInvalidKey = errors.New("invalid or revoked API key")
 	ErrWrongScope = errors.New("API key scope does not allow this endpoint")
-	ErrBadScope   = errors.New("scope must be 'mcp', 'monitor' or 'ingest'")
+	ErrBadScope   = errors.New("scope must be 'read', 'monitor' or 'ingest'")
 	ErrKeyName    = errors.New("key name must be 1–80 characters")
+	// errKnownKey is the ErrInvalidKey of a key that exists but is revoked or whose user is suspended.
+	errKnownKey = fmt.Errorf("%w: revoked or suspended", ErrInvalidKey)
 )
 
 type APIKey struct {
 	ID         int64      `json:"id"`
 	Name       string     `json:"name"`
 	Prefix     string     `json:"prefix"`
-	Scope      string     `json:"scope" enum:"mcp,monitor,ingest"`
+	Scope      string     `json:"scope" enum:"read,monitor,ingest"`
 	CreatedAt  time.Time  `json:"created_at"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	RevokedAt  *time.Time `json:"revoked_at"`
@@ -44,7 +46,7 @@ type APIKey struct {
 }
 
 // Scopes lists the valid API key scopes.
-var Scopes = []string{ScopeMCP, ScopeMonitor, ScopeIngest}
+var Scopes = []string{ScopeRead, ScopeMonitor, ScopeIngest}
 
 func ValidScope(s string) bool { return slices.Contains(Scopes, s) }
 
@@ -127,6 +129,13 @@ func (s *Service) VerifyKey(ctx context.Context, token string) (APIKey, error) {
 		WHERE k.key_hash = ? AND k.revoked_at IS NULL AND u.suspended_at IS NULL`,
 		hashToken(token)).Scan(&k.ID, &k.Name, &k.Prefix, &k.Scope, &created, &used, &k.User.ID, &k.User.Username, &k.User.DBName)
 	if errors.Is(err, sql.ErrNoRows) {
+		var known bool
+		if err := s.db.RO.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM api_keys WHERE key_hash = ?)", hashToken(token)).Scan(&known); err != nil {
+			return APIKey{}, err
+		}
+		if known {
+			return APIKey{}, errKnownKey
+		}
 		return APIKey{}, ErrInvalidKey
 	}
 	if err != nil {

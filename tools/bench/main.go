@@ -1,11 +1,11 @@
 //go:build unix
 
-// Command bench checks Ritm against the performance requirements (§14) using a built binary:
+// Command bench checks Ritm against its performance budgets using a built binary:
 //
-//	NFR-1  peak RSS while importing (≤ 150 MB for a 2 GB export.xml)
-//	NFR-2  first import (≤ 120 s per 1 GB export.xml) and delta re-import (≤ 60 s)
-//	NFR-3  API p95 (≤ 200 ms) for 5-year ranges
-//	NFR-4  idle server memory (≤ 40 MB)
+//	peak RSS while importing (≤ 150 MB for a 2 GB export.xml)
+//	first import (≤ 120 s per 1 GB export.xml) and delta re-import (≤ 60 s)
+//	API p95 (≤ 200 ms) for 5-year ranges
+//	idle server memory (≤ 40 MB)
 //
 // It runs the binary in a throw-away data directory and never touches ./data:
 //
@@ -118,8 +118,8 @@ func run(bin, export string, nDays, hr, requests int, keep bool) error {
 	perGB := first.Seconds() / gb
 	rssLimit := 150.0
 	res = append(res,
-		result{"NFR-2 first import", fmt.Sprintf("%.1f s (%.1f s per GB)", first.Seconds(), perGB), "≤ 120 s per GB", perGB <= 120},
-		result{"NFR-1 peak RSS, import", fmt.Sprintf("%.0f MB", rss), "≤ 150 MB (2 GB export)", rss <= rssLimit})
+		result{"first import", fmt.Sprintf("%.1f s (%.1f s per GB)", first.Seconds(), perGB), "≤ 120 s per GB", perGB <= 120},
+		result{"peak RSS, import", fmt.Sprintf("%.0f MB", rss), "≤ 150 MB (2 GB export)", rss <= rssLimit})
 
 	fmt.Println("delta re-import of the same export…")
 	delta, rss2, err := timed(bin, env, "import", "--user", user, export)
@@ -127,8 +127,8 @@ func run(bin, export string, nDays, hr, requests int, keep bool) error {
 		return err
 	}
 	res = append(res,
-		result{"NFR-2 delta re-import", fmt.Sprintf("%.1f s", delta.Seconds()), "≤ 60 s", delta.Seconds() <= 60},
-		result{"NFR-1 peak RSS, re-import", fmt.Sprintf("%.0f MB", rss2), "≤ 150 MB", rss2 <= rssLimit})
+		result{"delta re-import", fmt.Sprintf("%.1f s", delta.Seconds()), "≤ 60 s", delta.Seconds() <= 60},
+		result{"peak RSS, re-import", fmt.Sprintf("%.0f MB", rss2), "≤ 150 MB", rss2 <= rssLimit})
 
 	fmt.Println("serving…")
 	srv := exec.Command(bin, "serve")
@@ -150,14 +150,14 @@ func run(bin, export string, nDays, hr, requests int, keep bool) error {
 	if err != nil {
 		return err
 	}
-	res = append(res, result{"NFR-4 idle RSS, server", fmt.Sprintf("%.0f MB", idle), "≤ 40 MB", idle <= 40})
+	res = append(res, result{"idle RSS, server", fmt.Sprintf("%.0f MB", idle), "≤ 40 MB", idle <= 40})
 
 	p95s, err := apiLatency(base, requests)
 	if err != nil {
 		return err
 	}
 	for _, p := range p95s {
-		res = append(res, result{"NFR-3 p95 " + p.path, fmt.Sprintf("%.0f ms", p.ms), "≤ 200 ms", p.ms <= 200})
+		res = append(res, result{"p95 " + p.path, fmt.Sprintf("%.0f ms", p.ms), "≤ 200 ms", p.ms <= 200})
 	}
 	busy, _ := rssOf(srv.Process.Pid)
 	res = append(res, result{"RSS after API load (info)", fmt.Sprintf("%.0f MB", busy), "—", true})
@@ -260,7 +260,7 @@ type p95 struct {
 // apiLatency signs in and times the SPA's heaviest endpoints over 5-year ranges.
 func apiLatency(base string, n int) ([]p95, error) {
 	body, _ := json.Marshal(map[string]string{"username": user, "password": password})
-	req, _ := http.NewRequest("POST", base+"/api/auth/login", bytes.NewReader(body))
+	req, _ := http.NewRequest("POST", base+"/api/v1/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Ritm-CSRF", "1")
 	resp, err := http.DefaultClient.Do(req)
@@ -281,7 +281,7 @@ func apiLatency(base string, n int) ([]p95, error) {
 	var cov struct {
 		Types []struct{ To string } `json:"types"`
 	}
-	if err := getJSON(base+"/api/coverage", cookie, &cov); err != nil {
+	if err := getJSON(base+"/api/v1/coverage", cookie, &cov); err != nil {
 		return nil, err
 	}
 	to := "" // latest day with data
@@ -294,18 +294,18 @@ func apiLatency(base string, n int) ([]p95, error) {
 	end, _ := time.Parse("2006-01-02", to)
 	rng := fmt.Sprintf("from=%s&to=%s", end.AddDate(-5, 0, 1).Format("2006-01-02"), to)
 	paths := []string{
-		"/api/overview?period=last_7d",
-		"/api/overview?period=last_month",
-		"/api/insights",
-		"/api/activity/daily?" + rng,
-		"/api/heart/daily?" + rng,
-		"/api/heart/events?" + rng,
-		"/api/sleep?" + rng,
-		"/api/workouts?" + rng,
-		"/api/training/load?" + rng,
-		"/api/training/weekly?" + rng,
-		"/api/activity/day/" + to,
-		"/api/coverage",
+		"/api/v1/overview?period=last_7d",
+		"/api/v1/overview?period=last_month",
+		"/api/v1/insights",
+		"/api/v1/activity/daily?" + rng,
+		"/api/v1/heart/daily?" + rng,
+		"/api/v1/heart/events?" + rng,
+		"/api/v1/sleep/nights?" + rng,
+		"/api/v1/workouts?" + rng,
+		"/api/v1/training/load?" + rng,
+		"/api/v1/training/weekly?" + rng,
+		"/api/v1/days/" + to,
+		"/api/v1/coverage",
 	}
 	var out []p95
 	for _, p := range paths {

@@ -14,7 +14,7 @@ import (
 )
 
 // backup writes consistent copies of app.db and every user's database into dir, mirroring the
-// data-directory layout (NFR-8). VACUUM INTO reads a snapshot, so it is safe while the server
+// data-directory layout. VACUUM INTO reads a snapshot, so it is safe while the server
 // runs. Restore by stopping Ritm and copying the files back into RITM_DATA_DIR.
 func backup(args []string) error {
 	if len(args) != 1 {

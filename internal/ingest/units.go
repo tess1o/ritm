@@ -10,7 +10,7 @@ var fractionPercentTypes = map[string]bool{
 	"HKQuantityTypeIdentifierBodyFatPercentage":              true,
 }
 
-// normalize converts a value to Ritm's canonical units (PAR-6): distance → m, energy → kcal,
+// normalize converts a value to Ritm's canonical units: distance → m, energy → kcal,
 // time → s, mass → kg, temperature → degC, speed → m/s, HR → bpm, percentages → 0–100.
 func normalize(typ, unit string, v float64) (string, float64) {
 	switch unit {

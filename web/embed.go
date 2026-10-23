@@ -1,4 +1,4 @@
-// Package web embeds the built Vue SPA (web/dist) into the Go binary (FE-2).
+// Package web embeds the built Vue SPA (web/dist) into the Go binary.
 package web
 
 import (

@@ -65,7 +65,7 @@ func TestMCP(t *testing.T) {
 		HRIntervalSec: 900, WorkoutHRIntervalSec: 30, Walks: true}
 	s := newTestServer(t, true, o.Start.AddDate(0, 0, o.Days).Add(10*time.Hour))
 	alice, bob := s.register("alice"), s.register("bob")
-	aliceKey, bobKey := s.createKey(alice, "Claude", auth.ScopeMCP), s.createKey(bob, "Claude", auth.ScopeMCP)
+	aliceKey, bobKey := s.createKey(alice, "Claude", auth.ScopeRead), s.createKey(bob, "Claude", auth.ScopeRead)
 	monKey := s.createKey(alice, "Kuma", auth.ScopeMonitor)
 	info, _ := s.auth.UserByName(ctx, "alice")
 	tn, err := s.tenants.Get(ctx, info.User)
@@ -77,7 +77,7 @@ func TestMCP(t *testing.T) {
 	srv := httptest.NewServer(s.h)
 	defer srv.Close()
 
-	// Auth (MCP-1): bearer key with the mcp scope.
+	// Auth: bearer key with the read scope.
 	initBody := []byte(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"x","version":"1"}}}`)
 	for key, want := range map[string]int{"": http.StatusUnauthorized, "ritm_wrong": http.StatusUnauthorized, monKey: http.StatusForbidden} {
 		req, _ := http.NewRequest("POST", srv.URL+"/mcp", bytes.NewReader(initBody))
@@ -200,7 +200,7 @@ func TestMCP(t *testing.T) {
 	call(t, cs, "get_insights", map[string]any{"category": "activity"}, false)
 	call(t, cs, "get_insights", map[string]any{"category": "mood"}, true)
 
-	// query_sql (§10, SEC-2) is off until the user allows it in Settings.
+	// query_sql is off until the user allows it in Settings.
 	if e := call(t, cs, "query_sql", map[string]any{"sql": "SELECT 1"}, true); !strings.Contains(e["error"].(string), "Allow AI assistants to run SQL queries") {
 		t.Fatalf("disabled sql: %v", e)
 	}

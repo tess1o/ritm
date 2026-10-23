@@ -2,12 +2,13 @@
   "name": "ritm-web",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.node.json",
     "lint": "eslint src",
     "size": "node scripts/size-check.mjs",
     "gen:api": "openapi-typescript ../docs/openapi.yaml -o src/lib/api-schema.d.ts --root-types --root-types-no-schema-prefix"

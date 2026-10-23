@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// One reusable ECharts wrapper: init, dark theme, resize via ResizeObserver, disposal (FE-6).
+// One reusable ECharts wrapper: init, dark theme, resize via ResizeObserver, disposal.
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { echarts, ensureTheme } from '../charts/echarts'
 import type { EChartsCoreOption } from 'echarts/core'

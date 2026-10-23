@@ -13,7 +13,7 @@ const notBuiltPage = `<!doctype html><html><head><meta charset="utf-8"><meta nam
 <code>make dev</code> and open <a style="color:#7aa2ff" href="http://localhost:5173">http://localhost:5173</a>.</p></body></html>`
 
 // spa serves the embedded Vue build: hashed assets are immutable, unknown non-API paths fall
-// back to index.html (FE-2).
+// back to index.html.
 func (s *Server) spa() http.Handler {
 	files := s.SPA
 	fileServer := http.FileServerFS(files)
