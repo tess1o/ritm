@@ -4,6 +4,7 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Icon from './Icon.vue'
+import IconBadge from './IconBadge.vue'
 import PeriodPicker from './PeriodPicker.vue'
 import { useAuth } from '../composables/useAuth'
 import { useFreshness } from '../composables/useFreshness'
@@ -109,7 +110,7 @@ const title = computed(() => pageMeta.value.title ?? route.meta.title ?? 'Ritm')
             <RouterLink v-if="pageMeta.back" :to="pageMeta.back.to" class="back small">
               <Icon name="left" :size="14" /> {{ pageMeta.back.label }}
             </RouterLink>
-            <h1>{{ title }}</h1>
+            <h1 :class="{ 'with-icon': pageMeta.icon }"><IconBadge v-if="pageMeta.icon" :name="pageMeta.icon" :size="30" /><span>{{ title }}</span></h1>
             <p v-if="pageMeta.subtitle" class="subtitle">{{ pageMeta.subtitle }}</p>
           </div>
           <div class="actions">
@@ -181,6 +182,15 @@ const title = computed(() => pageMeta.value.title ?? route.meta.title ?? 'Ritm')
 .heading h1 {
   font-size: 1.45rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.heading h1.with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.heading h1.with-icon > span {
   overflow: hidden;
   text-overflow: ellipsis;
 }

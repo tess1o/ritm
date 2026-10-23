@@ -13,6 +13,7 @@ import { useToast } from '../composables/useToast'
 import { api, get } from '../lib/api'
 import { clock, loadModelName, longDay, num, time } from '../lib/fmt'
 import type { HRPoint, Items, WorkoutDetail, WorkoutRoute } from '../lib/types'
+import { workoutIcon } from '../lib/workouts'
 import { color, grid, legend } from '../charts/helpers'
 
 const route = useRoute()
@@ -48,6 +49,7 @@ setPageMeta(() => {
   const where = x.indoor ? 'indoor' : x.indoor === 0 ? 'outdoor' : ''
   return {
     title: x.name,
+    icon: workoutIcon(x.activity_type),
     subtitle: [longDay(x.day), `${time(x.start_ms)}–${time(x.end_ms)}`, where, x.source].filter(Boolean).join(' · '),
     back: { to: '/training', label: 'Training' },
   }

@@ -212,6 +212,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Days with data
+         * @description Which days have daily activity or workouts (default the last 366 days), plus the first and last day with data.
+         */
+        get: operations["getCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/coverage": {
         parameters: {
             query?: never;
@@ -753,6 +773,20 @@ export interface components {
             /** @description Visitors may create accounts (RITM_REGISTRATION_ENABLED) */
             registration_enabled: boolean;
         };
+        CalendarDay: {
+            /** @description Daily activity is stored for the day */
+            activity: boolean;
+            day: string;
+            /** @description At least one of the day's workouts has a GPS route */
+            route: boolean;
+            /** Format: double */
+            steps: number | null;
+            /**
+             * Format: int64
+             * @description Workouts that started that local day
+             */
+            workouts: number;
+        };
         Catalog: {
             prompts: components["schemas"]["CatalogEntry"][];
             resources: components["schemas"]["CatalogEntry"][];
@@ -860,6 +894,16 @@ export interface components {
             walking_hr_bpm: number | null;
             /** Format: double */
             wrist_temp_dev_c: number | null;
+        };
+        DataCalendar: {
+            /** @description First day with daily activity or a workout, across all data */
+            first_day: string | null;
+            from: string;
+            /** @description Days in the range with daily activity or a workout; days without are left out */
+            items: components["schemas"]["CalendarDay"][];
+            /** @description Last day with daily activity or a workout, across all data */
+            last_day: string | null;
+            to: string;
         };
         DayDetail: {
             activity: components["schemas"]["DailyActivity"];
@@ -1735,6 +1779,7 @@ export type ApiKey = components['schemas']['APIKey'];
 export type Account = components['schemas']['Account'];
 export type Annotation = components['schemas']['Annotation'];
 export type AuthConfig = components['schemas']['AuthConfig'];
+export type CalendarDay = components['schemas']['CalendarDay'];
 export type Catalog = components['schemas']['Catalog'];
 export type CatalogEntry = components['schemas']['CatalogEntry'];
 export type CatalogParam = components['schemas']['CatalogParam'];
@@ -1744,6 +1789,7 @@ export type CreatedApiKey = components['schemas']['CreatedAPIKey'];
 export type Credentials = components['schemas']['Credentials'];
 export type DailyActivity = components['schemas']['DailyActivity'];
 export type DailyHeart = components['schemas']['DailyHeart'];
+export type DataCalendar = components['schemas']['DataCalendar'];
 export type DayDetail = components['schemas']['DayDetail'];
 export type ErrorDetail = components['schemas']['ErrorDetail'];
 export type ErrorModel = components['schemas']['ErrorModel'];
@@ -2530,6 +2576,78 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    getCalendar: {
+        parameters: {
+            query?: {
+                /** @description today, yesterday, last_7d, last_14d, last_30d, last_90d, last_365d, last_<n>d, this_week, last_week, this_month, last_month, ytd, YYYY-MM-DD or FROM..TO. Overrides from/to. */
+                period?: string;
+                /** @description First day (YYYY-MM-DD, or a period name meaning its first day) */
+                from?: string;
+                /** @description Last day (YYYY-MM-DD, or a period name meaning its last day; default today) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataCalendar"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

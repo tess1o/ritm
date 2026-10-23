@@ -59,6 +59,15 @@ type FreshnessSummary struct {
 	HasSleepData bool `json:"has_sleep_data" doc:"Any night of sleep is stored (the Sleep page is shown)"`
 }
 
+// DataCalendar marks the days in a range that have data, for the date pickers.
+type DataCalendar struct {
+	From     string              `json:"from"`
+	To       string              `json:"to"`
+	FirstDay *string             `json:"first_day" doc:"First day with daily activity or a workout, across all data"`
+	LastDay  *string             `json:"last_day" doc:"Last day with daily activity or a workout, across all data"`
+	Items    []query.CalendarDay `json:"items" doc:"Days in the range with daily activity or a workout; days without are left out"`
+}
+
 // InsightList is a page of insights.
 type InsightList struct {
 	Items     []insights.Insight `json:"items"`
@@ -170,6 +179,25 @@ func (s *Server) registerData() {
 				return nil, s.problem(ctx, err)
 			}
 			return ok(dd), nil
+		})
+
+	register(s, sessionOnly, huma.Operation{OperationID: "getCalendar", Method: http.MethodGet, Path: "/calendar", Tags: []string{"Activity"},
+		Summary: "Days with data", Description: "Which days have daily activity or workouts (default the last 366 days), plus the first and last day with data.",
+		Errors: []int{http.StatusBadRequest}},
+		func(ctx context.Context, in *RangeQuery) (*body[DataCalendar], error) {
+			t, r, err := s.rangeOf(ctx, *in, 366)
+			if err != nil {
+				return nil, err
+			}
+			list, err := t.Query.Calendar(ctx, r)
+			if err != nil {
+				return nil, s.problem(ctx, err)
+			}
+			first, last, err := t.Query.DataExtent(ctx)
+			if err != nil {
+				return nil, s.problem(ctx, err)
+			}
+			return ok(DataCalendar{From: r.From.String(), To: r.To.String(), FirstDay: first, LastDay: last, Items: list}), nil
 		})
 
 	register(s, sessionOnly, huma.Operation{OperationID: "listDailyActivity", Method: http.MethodGet, Path: "/activity/daily", Tags: []string{"Activity"},

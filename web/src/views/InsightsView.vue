@@ -1,203 +1,74 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import Card from '../components/Card.vue'
-import Chart from '../components/Chart.vue'
-import DeltaBadge from '../components/DeltaBadge.vue'
 import Icon from '../components/Icon.vue'
-import InsightItem from '../components/InsightItem.vue'
+import InsightEvidence from '../components/InsightEvidence.vue'
 import StateBlock from '../components/StateBlock.vue'
 import { useAsync } from '../composables/useAsync'
 import { setPageMeta } from '../composables/usePageMeta'
 import { usePeriod } from '../composables/usePeriod'
 import { usePeriodSwipe } from '../composables/useSwipe'
 import { get, qs } from '../lib/api'
-import { addDays, num, range, today } from '../lib/fmt'
-import type { DailyActivity, DailyHeart, Insight, InsightList, LoadDay, SleepNight, Weekly } from '../lib/types'
-import { axisTooltip, color, dayAxis, grid, valueAxis } from '../charts/helpers'
+import { collapse, group, streakLabel, type Row } from '../lib/insights'
+import { today } from '../lib/fmt'
+import type { InsightList, Polarity } from '../lib/types'
 
 setPageMeta(() => ({ subtitle: 'Comparisons with your own baseline · informational, not medical advice' }))
 const category = ref('')
-const polarity = ref('')
+// Polarity filters on the client, so the summary chips keep showing every count.
+const polarity = ref<Polarity | ''>('')
 const { range: period, shift } = usePeriod()
 const swipe = usePeriodSwipe(shift, () => period.value.to < today())
 const list = useAsync(
   (s) =>
     get<InsightList>(
-      `/insights${qs({ period: `${period.value.from}..${period.value.to}`, category: category.value, polarity: polarity.value, limit: 300 })}`,
+      `/insights${qs({ period: `${period.value.from}..${period.value.to}`, category: category.value, limit: 300 })}`,
       s,
     ),
-  [period, category, polarity],
+  [period, category],
 )
 
-const groups = computed(() => {
-  const m = new Map<string, Insight[]>()
-  for (const i of list.data.value?.items ?? []) {
-    const k = i.period_end
-    m.set(k, [...(m.get(k) ?? []), i])
-  }
-  return [...m.entries()]
+const rows = computed(() => collapse(list.data.value?.items ?? []))
+const counts = computed(() => {
+  const c: Record<Polarity, number> = { attention: 0, positive: 0, neutral: 0 }
+  for (const r of rows.value) c[r.insight.polarity]++
+  return c
 })
+const groups = computed(() => group(polarity.value ? rows.value.filter((r) => r.insight.polarity === polarity.value) : rows.value, today()))
+const visible = computed(() => groups.value.flatMap((g) => g.rows))
 
-// Evidence chart: the metric's values over the insight period and the stretch before it, with the
-// baseline as a dashed line. Each source says which API it reads and how to pick the values.
-type Row = { day: string; v: number | null }
-type Source = {
-  url: string // API path without the leading slash
-  rows: (r: never) => Row[]
-  unit: string
-  baseline?: (i: Insight) => number | null // in chart units; omitted = no line
-  label?: string // what one bar is
+const SUMMARY: { key: Polarity; icon: string; label: (n: number) => string }[] = [
+  { key: 'attention', icon: 'alert', label: (n) => `${n} need${n === 1 ? 's' : ''} attention` },
+  { key: 'positive', icon: 'check', label: (n) => `${n} positive` },
+  { key: 'neutral', icon: 'info', label: (n) => `${n} note${n === 1 ? '' : 's'}` },
+]
+const MARK: Record<Polarity, { icon: string; label: string }> = {
+  positive: { icon: 'check', label: 'Positive' },
+  neutral: { icon: 'info', label: 'Note' },
+  attention: { icon: 'alert', label: 'Attention' },
 }
-const asIs = (i: Insight) => i.baseline_value
-function daily<T extends { day: string }>(pick: (d: T) => number | null) {
-  // Collections have items; training load lists its days.
-  return (r: { items?: T[]; days?: T[] }) => (r.items ?? r.days ?? []).map((d) => ({ day: d.day, v: pick(d) }))
-}
-const watch = (f: (d: DailyActivity) => number | null) => daily<DailyActivity>((d) => (d.has_watch_data ? f(d) : null))
-const sessions = (f: (s: Weekly['sessions'][number]) => number | null) => (r: Weekly) => r.sessions.map((s) => ({ day: s.day, v: f(s) }))
-const metricSource: Record<string, Source> = {
-  steps: { url: 'activity/daily', rows: watch((d) => d.steps), unit: 'steps', baseline: asIs },
-  distance_m: { url: 'activity/daily', rows: watch((d) => (d.distance_m === null ? null : d.distance_m / 1000)), unit: 'km',
-    baseline: (i) => (i.baseline_value === null ? null : i.baseline_value / 1000) },
-  active_kcal: { url: 'activity/daily', rows: watch((d) => d.active_kcal), unit: 'kcal', baseline: asIs },
-  step_goal_days: { url: 'activity/daily', rows: watch((d) => d.steps), unit: 'steps' },
-  longest_sedentary_h: { url: 'activity/daily', rows: daily<DailyActivity>((d) => d.longest_sedentary_h), unit: 'h', baseline: asIs },
-  steps_weekend_ratio: { url: 'activity/daily', rows: watch((d) => d.steps), unit: 'steps' },
-  steps_non_gym_days: { url: 'activity/daily', rows: watch((d) => d.steps), unit: 'steps' },
-  move_ring_days: { url: 'activity/daily', unit: '% of goal', label: 'Move ring',
-    rows: daily<DailyActivity>((d) => (d.rings.move_kcal !== null && d.rings.move_goal_kcal ? Math.round((d.rings.move_kcal / d.rings.move_goal_kcal) * 100) : null)),
-    baseline: () => 100 },
-  resting_hr: { url: 'heart/daily', rows: daily<DailyHeart>((d) => d.resting_hr_bpm), unit: 'bpm', baseline: asIs },
-  walking_hr: { url: 'heart/daily', rows: daily<DailyHeart>((d) => d.walking_hr_bpm), unit: 'bpm', baseline: asIs },
-  hrv_sdnn: { url: 'heart/daily', rows: daily<DailyHeart>((d) => d.hrv_sdnn_ms), unit: 'ms', baseline: asIs },
-  vo2max: { url: 'heart/daily', rows: daily<DailyHeart>((d) => d.vo2max_ml_kg_min), unit: 'mL/kg/min', baseline: asIs },
-  heart_events: { url: 'heart/daily', rows: daily<DailyHeart>((d) => d.heart_events || null), unit: 'events' },
-  asleep_min: { url: 'sleep/nights', rows: daily<SleepNight>((d) => (d.asleep_min === null ? null : d.asleep_min / 60)), unit: 'h',
-    baseline: (i) => (i.baseline_value === null ? null : i.baseline_value / 60) },
-  sessions: { url: 'training/weekly', unit: 'sessions', label: 'week', baseline: asIs,
-    rows: (r: Weekly) => r.weeks.map((w) => ({ day: w.week_start, v: w.sessions })) },
-  training_hours: { url: 'training/weekly', unit: 'h', label: 'session', rows: sessions((x) => (x.duration_s === null ? null : x.duration_s / 3600)) },
-  session_duration_min: { url: 'training/weekly', unit: 'min', label: 'session', baseline: asIs,
-    rows: sessions((x) => (x.duration_s === null ? null : Math.round(x.duration_s / 60))) },
-  pct_z3_plus: { url: 'training/weekly', unit: '% in zone 3+', label: 'session', baseline: asIs, rows: sessions((x) => x.pct_z3_plus) },
-  session_avg_hr: { url: 'training/weekly', unit: 'bpm', label: 'session', baseline: asIs, rows: sessions((x) => x.avg_hr_bpm) },
-  acwr: { url: 'training/load', unit: 'ACWR', rows: daily<LoadDay>((d) => d.acwr) },
-  tsb: { url: 'training/load', unit: 'TSB', rows: daily<LoadDay>((d) => d.tsb) },
-}
-// Insights that compare two groups of days get a two-bar chart from their own values.
-const groupCharts: Record<string, { labels: [string, string]; unit: string }> = {
-  next_day_resting_hr_delta: { labels: ['After training', 'After rest'], unit: 'bpm' },
-  hrv_after_short_sleep: { labels: ['After nights < 6 h', 'Other nights'], unit: 'ms' },
-}
-const hasChart = (i: Insight) => !!i.metric && (!!metricSource[i.metric] || (!!groupCharts[i.metric] && i.current_value !== null && i.baseline_value !== null))
+
+// Wide screens show the evidence of the selected insight in a side pane; narrow ones expand it
+// under the row.
+const wideQuery = window.matchMedia('(min-width: 1200px)')
+const wide = ref(wideQuery.matches)
+const onWide = (e: MediaQueryListEvent) => (wide.value = e.matches)
+wideQuery.addEventListener('change', onWide)
+onScopeDispose(() => wideQuery.removeEventListener('change', onWide))
+
 const open = ref<number | null>(null)
-const evidence = ref<{ id: number; series: Row[]; unit: string } | null>(null)
-const evidenceLoading = ref(false)
-async function toggle(i: Insight) {
-  if (open.value === i.id) {
-    open.value = null
-    return
-  }
-  open.value = i.id
-  const src = i.metric ? metricSource[i.metric] : undefined
-  evidence.value = null
-  if (!src) return
-  evidenceLoading.value = true
-  const len = Math.round((new Date(i.period_end).getTime() - new Date(i.period_start).getTime()) / 86400000) + 1
-  const from = addDays(i.period_start, -Math.max(28, len * 2))
-  try {
-    const r = await get<never>(`/${src.url}${qs({ from, to: i.period_end, hours: false })}`)
-    evidence.value = { id: i.id, unit: src.unit, series: src.rows(r) }
-  } finally {
-    evidenceLoading.value = false
-  }
+const selected = computed<Row | undefined>(() => visible.value.find((r) => r.insight.id === open.value))
+// On wide screens the pane always shows something: the first (most important) insight by default.
+watch(
+  [visible, wide],
+  () => {
+    if (wide.value && !selected.value) open.value = visible.value[0]?.insight.id ?? null
+  },
+  { immediate: true },
+)
+function toggle(r: Row) {
+  open.value = open.value === r.insight.id && !wide.value ? null : r.insight.id
 }
-function baselineOf(i: Insight) {
-  const src = i.metric ? metricSource[i.metric] : undefined
-  return src?.baseline ? src.baseline(i) : null
-}
-function evidenceOption(i: Insight) {
-  const group = i.metric ? groupCharts[i.metric] : undefined
-  if (group) {
-    return {
-      grid: grid({ top: 16 }),
-      tooltip: axisTooltip(),
-      xAxis: { type: 'category', data: group.labels, axisTick: { show: false } },
-      yAxis: valueAxis(group.unit, { scale: true }),
-      series: [{ type: 'bar', barMaxWidth: 48, data: [
-        { value: i.current_value, itemStyle: { color: color('--s-blue') } },
-        { value: i.baseline_value, itemStyle: { color: color('--c-context') } },
-      ] }],
-    }
-  }
-  const s = evidence.value?.series ?? []
-  const base = baselineOf(i)
-  return {
-    grid: grid({ top: 16 }),
-    tooltip: axisTooltip(),
-    xAxis: dayAxis(s.map((x) => x.day)),
-    yAxis: valueAxis(evidence.value?.unit, { scale: true }),
-    series: [
-      {
-        type: 'bar',
-        name: evidence.value?.unit,
-        data: s.map((x) => ({ value: x.v, itemStyle: { color: x.day >= i.period_start ? color('--s-blue') : color('--c-context') } })),
-        barMaxWidth: 14,
-        markLine:
-          base !== null
-            ? { silent: true, symbol: 'none', lineStyle: { color: color('--muted'), type: 'dashed' }, label: { formatter: 'baseline', color: color('--muted') }, data: [{ yAxis: base }] }
-            : undefined,
-      },
-    ],
-  }
-}
-// Human labels for evidence keys; unknown keys are prettified.
-const LABELS: Record<string, string> = {
-  days_with_data: 'Days with data',
-  baseline_days: 'Baseline days',
-  baseline_weeks: 'Baseline weeks',
-  baseline_weekly_sd: 'Week-to-week variation (SD)',
-  baseline_weekly_sd_min: 'Week-to-week variation (SD, min)',
-  previous_period: 'Compared with',
-  baseline_period: 'Baseline period',
-  median_90d: '90-day median',
-  goal_steps: 'Step goal',
-  streak_weeks: 'Streak (weeks)',
-  target: 'Target',
-  threshold_bpm: 'Threshold (bpm)',
-  sessions: 'Sessions',
-  previous_sessions: 'Sessions before',
-  baseline_sessions: 'Baseline sessions',
-  median_duration_min: 'Typical session (min)',
-  days_after_training: 'Days after training',
-  days_after_rest: 'Days after rest',
-  hrv_after_training_ms: 'HRV after training (ms)',
-  hrv_after_rest_ms: 'HRV after rest (ms)',
-  short_nights: 'Nights under 6 h',
-  other_nights: 'Other nights',
-  nights: 'Nights',
-  unit: 'Unit',
-}
-function pretty(k: string) {
-  if (LABELS[k]) return LABELS[k]
-  const t = k.replace(/_/g, ' ')
-  return t.charAt(0).toUpperCase() + t.slice(1)
-}
-function value(v: unknown): string {
-  if (v === null || v === undefined) return '–'
-  if (typeof v === 'number') return num(v, Number.isInteger(v) ? 0 : 1)
-  if (typeof v === 'object') {
-    const o = v as Record<string, string>
-    if (o.from && o.to) return range(o.from, o.to)
-    return Object.values(o).join(' · ')
-  }
-  return String(v)
-}
-const evidenceRows = (i: Insight) =>
-  Object.entries(i.evidence ?? {})
-    .filter(([k, v]) => k !== 'period' && k !== 'unit' && v !== null && v !== undefined)
-    .map(([k, v]) => ({ label: pretty(k), value: value(v) }))
-const unitOf = (i: Insight) => (typeof i.evidence?.unit === 'string' ? (i.evidence.unit as string) : '')
 </script>
 
 <template>
@@ -210,64 +81,55 @@ const unitOf = (i: Insight) => (typeof i.evidence?.unit === 'string' ? (i.eviden
         <option value="training">Training</option>
         <option value="recovery">Recovery</option>
       </select>
-      <select v-model="polarity" class="input filter" aria-label="Polarity">
-        <option value="">Any polarity</option>
-        <option value="positive">Positive</option>
-        <option value="neutral">Neutral</option>
-        <option value="attention">Attention</option>
-      </select>
     </Teleport>
 
+    <div v-if="rows.length" class="summary" role="group" aria-label="Filter by kind">
+      <button v-for="s in SUMMARY" :key="s.key" type="button" class="sum" :class="[s.key, { on: polarity === s.key }]"
+        :aria-pressed="polarity === s.key" :disabled="!counts[s.key]" @click="polarity = polarity === s.key ? '' : s.key">
+        <Icon :name="s.icon" :size="15" />
+        <span class="tnum">{{ s.label(counts[s.key]) }}</span>
+      </button>
+      <button v-if="polarity" type="button" class="sum clear" @click="polarity = ''">Show all</button>
+    </div>
+
     <StateBlock :loading="list.loading.value" :error="list.error.value" :empty="!groups.length" :height="300"
-      empty-text="No insights for this period. They need a few weeks of data, and only notable changes are reported.">
-      <Card v-for="[end, items] in groups" :key="end" :title="`Periods ending ${end}`">
-        <div>
-          <InsightItem v-for="i in items" :key="i.id" :insight="i">
-            <button class="ev-toggle" type="button" :aria-expanded="open === i.id" :aria-controls="`ev-${i.id}`" @click="toggle(i)">
-              <Icon name="right" :size="16" class="chev" :class="{ open: open === i.id }" />
-              {{ open === i.id ? 'Hide evidence' : 'Show evidence' }}
-            </button>
-            <section v-if="open === i.id" :id="`ev-${i.id}`" class="ev-panel" aria-label="Evidence">
-              <div v-if="i.current_value !== null" class="ev-compare">
-                <div class="ev-stat">
-                  <span class="ev-label">This period</span>
-                  <span class="ev-value tnum">{{ num(i.current_value, i.current_value < 100 ? 1 : 0) }}<small v-if="unitOf(i)"> {{ unitOf(i) }}</small></span>
-                  <span class="ev-sub">{{ range(i.period_start, i.period_end) }}</span>
+      :empty-text="polarity ? 'Nothing of this kind in the period.' : 'No insights for this period. They need a few weeks of data, and only notable changes are reported.'">
+      <div class="layout" :class="{ wide }">
+        <div class="groups">
+          <Card v-for="g in groups" :key="g.key" flush>
+            <header class="group-head">
+              <h2>{{ g.title }}</h2>
+              <span class="muted small tnum">{{ g.sub }}</span>
+            </header>
+            <ul class="rows">
+              <li v-for="r in g.rows" :key="r.insight.id" :class="{ open: open === r.insight.id }">
+                <button type="button" class="row-btn" :class="r.insight.polarity" :aria-expanded="wide ? undefined : open === r.insight.id"
+                  :aria-current="wide && open === r.insight.id ? 'true' : undefined" :aria-controls="wide ? 'ev-pane' : `ev-${r.insight.id}`"
+                  @click="toggle(r)">
+                  <span class="mark" :title="MARK[r.insight.polarity].label">
+                    <Icon :name="MARK[r.insight.polarity].icon" :size="15" :label="MARK[r.insight.polarity].label" />
+                  </span>
+                  <span class="text">
+                    <span class="title">{{ r.insight.title }}</span>
+                    <span class="body">{{ r.insight.body }}</span>
+                    <span v-if="streakLabel(r)" class="chip streak"><Icon name="flame" :size="13" />{{ streakLabel(r) }}</span>
+                  </span>
+                  <Icon name="right" :size="16" class="chev" />
+                </button>
+                <div v-if="!wide && open === r.insight.id" :id="`ev-${r.insight.id}`" class="inline-ev">
+                  <InsightEvidence :insight="r.insight" :repeats="r.repeats" />
                 </div>
-                <div v-if="i.baseline_value !== null" class="ev-stat">
-                  <span class="ev-label">Baseline</span>
-                  <span class="ev-value tnum muted-value">{{ num(i.baseline_value, i.baseline_value < 100 ? 1 : 0) }}<small v-if="unitOf(i)"> {{ unitOf(i) }}</small></span>
-                  <span class="ev-sub">your usual level</span>
-                </div>
-                <div v-if="i.delta_pct !== null" class="ev-stat">
-                  <span class="ev-label">Change</span>
-                  <span class="ev-value"><DeltaBadge :delta="i.delta_pct" :neutral="true" /></span>
-                </div>
-              </div>
-
-              <div v-if="hasChart(i)" class="ev-chart">
-                <Chart v-if="groupCharts[i.metric!]" :option="evidenceOption(i)" :height="170" :label="`Comparison behind: ${i.title}`" />
-                <div v-else-if="evidenceLoading && evidence?.id !== i.id" class="ev-skeleton" />
-                <template v-else-if="evidence?.id === i.id && evidence.series.length">
-                  <Chart :option="evidenceOption(i)" :height="170" :label="`Daily values behind: ${i.title}`" />
-                  <div class="ev-legend small">
-                    <span><i class="sw cur" /> Insight period</span>
-                    <span><i class="sw prev" /> Before</span>
-                    <span v-if="baselineOf(i) !== null"><i class="sw base" /> Baseline</span>
-                  </div>
-                </template>
-              </div>
-
-              <dl v-if="evidenceRows(i).length" class="ev-grid">
-                <div v-for="r in evidenceRows(i)" :key="r.label" class="ev-item">
-                  <dt>{{ r.label }}</dt>
-                  <dd class="tnum">{{ r.value }}</dd>
-                </div>
-              </dl>
-            </section>
-          </InsightItem>
+              </li>
+            </ul>
+          </Card>
+          <p v-if="list.data.value?.truncated" class="muted small">More insights match — choose a shorter period to see them all.</p>
         </div>
-      </Card>
+        <aside v-if="wide && selected" id="ev-pane" class="pane">
+          <Card>
+            <InsightEvidence :insight="selected.insight" :repeats="selected.repeats" heading @close="open = null" />
+          </Card>
+        </aside>
+      </div>
     </StateBlock>
   </div>
 </template>
@@ -277,146 +139,180 @@ const unitOf = (i: Insight) => (typeof i.evidence?.unit === 'string' ? (i.eviden
   width: auto;
   min-height: 44px;
 }
-.ev-toggle {
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sum {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  align-self: flex-start;
+  gap: 6px;
   min-height: 36px;
-  margin-top: 4px;
-  padding: 0 10px 0 6px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: transparent;
+  background: var(--surface);
   color: var(--text-2);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 560;
   cursor: pointer;
 }
-.ev-toggle:hover,
-.ev-toggle[aria-expanded='true'] {
+.sum:hover:not(:disabled) {
   border-color: var(--border-strong);
   color: var(--text);
-  background: var(--elevated);
 }
-.chev {
-  transition: transform 0.15s ease;
+.sum:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
-.chev.open {
-  transform: rotate(90deg);
+.sum.attention :deep(svg) {
+  color: var(--attention);
 }
-.ev-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 8px;
-  padding: 14px;
-  border-radius: var(--radius-sm);
-  background: var(--elevated);
-  border: 1px solid var(--border);
+.sum.positive :deep(svg) {
+  color: var(--positive);
 }
-.ev-compare {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px;
+.sum.neutral :deep(svg) {
+  color: var(--neutral);
 }
-.ev-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-.ev-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.ev-value {
-  font-size: 1.25rem;
-  font-weight: 650;
+.sum.on.attention {
+  background: var(--attention-bg);
+  border-color: var(--attention);
   color: var(--text);
 }
-.ev-value small {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--muted);
+.sum.on.positive {
+  background: var(--positive-bg);
+  border-color: var(--positive);
+  color: var(--text);
 }
-.muted-value {
-  color: var(--text-2);
+.sum.on.neutral {
+  background: var(--neutral-bg);
+  border-color: var(--neutral);
+  color: var(--text);
 }
-.ev-sub {
-  font-size: 0.78rem;
-  color: var(--muted);
+.sum.clear {
+  border-color: transparent;
+  background: transparent;
 }
-.ev-chart {
+.layout {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.layout.wide {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
+  align-items: start;
+}
+.groups {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
+  min-width: 0;
 }
-.ev-skeleton {
-  height: 170px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+.pane {
+  position: sticky;
+  top: 92px; /* below the sticky top bar */
+  max-height: calc(100dvh - 108px);
+  overflow-y: auto;
+  border-radius: var(--radius);
 }
-.ev-legend {
+.group-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  color: var(--text-2);
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 14px 14px 6px;
 }
-.ev-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.sw {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-}
-.sw.cur {
-  background: var(--s-blue);
-}
-.sw.prev {
-  background: var(--c-context);
-}
-.sw.base {
-  width: 14px;
-  height: 0;
-  border-radius: 0;
-  border-top: 2px dashed var(--muted);
-}
-.ev-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1px;
+.group-head h2 {
   margin: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--border);
+  font-size: 0.95rem;
 }
-.ev-item {
+.rows {
+  margin: 0;
+  padding: 0 0 6px;
+  list-style: none;
+}
+.rows li + li {
+  border-top: 1px solid var(--border);
+}
+.row-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row-btn:hover {
+  background: var(--elevated);
+}
+.open .row-btn {
+  background: var(--elevated);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.row-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--neutral-bg);
+  color: var(--neutral);
+}
+.positive .mark {
+  background: var(--positive-bg);
+  color: var(--positive);
+}
+.attention .mark {
+  background: var(--attention-bg);
+  color: var(--attention);
+}
+.text {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 12px;
-  background: var(--surface);
+  flex: 1;
+  min-width: 0;
 }
-dt {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-dd {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 560;
+.title {
+  font-weight: 600;
   color: var(--text);
+}
+.body {
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.streak {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+.chev {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.layout:not(.wide) .open .chev {
+  transform: rotate(90deg);
+}
+.inline-ev {
+  --ev-tile: var(--surface);
+  padding: 4px 14px 16px 54px;
+  background: var(--elevated);
+}
+@media (max-width: 639px) {
+  .inline-ev {
+    padding-left: 14px;
+  }
 }
 </style>

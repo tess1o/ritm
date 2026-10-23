@@ -138,20 +138,26 @@ const dfShortYear = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 's
 const dfLong = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const dfWeekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' })
 
-export const shortDay = (d: string) => dfShort.format(parseDay(d))
-export const shortDayYear = (d: string) => dfShortYear.format(parseDay(d))
-export const longDay = (d: string) => dfLong.format(parseDay(d))
+// en-GB abbreviates September as "Sept"; the server's texts (Go "Jan" layout) say "Sep".
+const sep = (s: string) => s.replace('Sept', 'Sep')
+
+export const shortDay = (d: string) => sep(dfShort.format(parseDay(d)))
+export const shortDayYear = (d: string) => sep(dfShortYear.format(parseDay(d)))
+export const longDay = (d: string) => sep(dfLong.format(parseDay(d)))
 export const weekday = (d: string) => dfWeekday.format(parseDay(d))
 // Instants are formatted in the server's zone; YYYY-MM-DD days above are calendar dates.
 export const time = (ms: number) => zoned({ hour: '2-digit', minute: '2-digit' }).format(ms)
-export const dateTime = (v: string | number) => zoned({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(v))
+export const dateTime = (v: string | number) => sep(zoned({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(v)))
 
 const dfMonth = new Intl.DateTimeFormat('en-GB', { month: 'short', year: '2-digit' })
 /** "2026-10" → "Oct 26" */
-export const monthLabel = (ym: string) => dfMonth.format(parseDay(`${ym}-01`))
+export const monthLabel = (ym: string) => sep(dfMonth.format(parseDay(`${ym}-01`)))
 
+/** "12–18 Oct", "28 Sep – 4 Oct" */
 export function range(from: string, to: string): string {
-  return from === to ? shortDay(from) : `${shortDay(from)} – ${shortDay(to)}`
+  if (from === to) return shortDay(from)
+  if (from.slice(0, 7) === to.slice(0, 7)) return `${parseDay(from).getDate()}–${shortDay(to)}`
+  return `${shortDay(from)} – ${shortDay(to)}`
 }
 
 /** "3 days ago" */

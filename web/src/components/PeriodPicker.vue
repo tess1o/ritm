@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Period toolbar: presets · ‹ range › (with the comparison range beneath) · Compare switch.
-import { ref, watch } from 'vue'
+// The range opens a calendar that marks the days with data; picking two days makes a custom range.
+import DataCalendar from './DataCalendar.vue'
 import Icon from './Icon.vue'
 import { usePeriod, type PeriodKey } from '../composables/usePeriod'
 import { range as fmtRange, today } from '../lib/fmt'
@@ -14,17 +15,11 @@ const options: { key: PeriodKey; label: string; title: string }[] = [
   { key: 'year', label: '1Y', title: 'Last 12 months' },
   { key: 'custom', label: 'Custom', title: 'Custom range' },
 ]
-const from = ref(range.value.from)
-const to = ref(range.value.to)
-watch(range, (r) => {
-  from.value = r.from
-  to.value = r.to
-})
 function select(k: PeriodKey) {
   state.value = { ...state.value, key: k, from: range.value.from, to: range.value.to }
 }
-function applyCustom() {
-  if (from.value && to.value && from.value <= to.value) state.value = { ...state.value, key: 'custom', from: from.value, to: to.value }
+function pickRange(from: string, to: string) {
+  state.value = { ...state.value, key: 'custom', from, to }
 }
 function toggleCompare() {
   state.value = { ...state.value, compare: !state.value.compare }
@@ -40,15 +35,13 @@ function toggleCompare() {
 
     <div class="nav">
       <button class="arrow" type="button" aria-label="Previous period" @click="shift(-1)"><Icon name="left" :size="18" /></button>
-      <div class="dates">
-        <span v-if="state.key === 'custom'" class="custom">
-          <input v-model="from" class="tnum" type="date" aria-label="From" :max="to" @change="applyCustom" />
-          <span class="muted">–</span>
-          <input v-model="to" class="tnum" type="date" aria-label="To" :min="from" :max="today()" @change="applyCustom" />
+      <DataCalendar mode="range" :from="range.from" :to="range.to" :label="`Choose dates, ${fmtRange(range.from, range.to)} shown`"
+        @pick-range="pickRange">
+        <span class="dates">
+          <span class="cur tnum">{{ fmtRange(range.from, range.to) }}<Icon name="calendar" :size="13" class="cal" /></span>
+          <span v-if="compare && state.compare" class="prev tnum">vs {{ fmtRange(previous.from, previous.to) }}</span>
         </span>
-        <span v-else class="cur tnum">{{ fmtRange(range.from, range.to) }}</span>
-        <span v-if="compare && state.compare" class="prev tnum">vs {{ fmtRange(previous.from, previous.to) }}</span>
-      </div>
+      </DataCalendar>
       <button class="arrow" type="button" aria-label="Next period" :disabled="range.to >= today()" @click="shift(1)">
         <Icon name="right" :size="18" />
       </button>
@@ -125,6 +118,9 @@ function toggleCompare() {
   opacity: 0.35;
   cursor: default;
 }
+.nav :deep(.dc-trigger) {
+  padding: 0 8px;
+}
 .dates {
   display: flex;
   flex-direction: column;
@@ -134,6 +130,8 @@ function toggleCompare() {
   line-height: 1.15;
 }
 .cur {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text);
@@ -185,31 +183,8 @@ function toggleCompare() {
   transform: translateX(12px);
   background: #0b1020;
 }
-/* custom range: the date inputs replace the range label inside the pill, keeping the toolbar on one row */
-.custom {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-.custom input {
-  min-width: 0;
-  height: 22px;
-  padding: 0 2px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-.custom input:focus-visible {
-  outline: 1px solid var(--accent);
-}
-.custom input::-webkit-calendar-picker-indicator {
-  margin-left: 2px;
-  opacity: 0.6;
-  cursor: pointer;
+.cal {
+  margin-left: 5px;
+  color: var(--muted);
 }
 </style>

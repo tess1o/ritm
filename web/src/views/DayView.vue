@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Card from '../components/Card.vue'
 import Chart from '../components/Chart.vue'
+import DataCalendar from '../components/DataCalendar.vue'
 import Icon from '../components/Icon.vue'
+import IconBadge from '../components/IconBadge.vue'
 import KpiCard from '../components/KpiCard.vue'
 import MetricStrip, { type StripItem } from '../components/MetricStrip.vue'
 import StateBlock from '../components/StateBlock.vue'
@@ -12,8 +14,9 @@ import { setPageMeta } from '../composables/usePageMeta'
 import { useSettings } from '../composables/useSettings'
 import { useSwipe } from '../composables/useSwipe'
 import { get } from '../lib/api'
-import { addDays, clock, hm, km, longDay, num, time, today } from '../lib/fmt'
+import { addDays, clock, hm, km, longDay, num, shortDayYear, time, today } from '../lib/fmt'
 import type { DayDetail } from '../lib/types'
+import { workoutIcon } from '../lib/workouts'
 import { color, isPhone } from '../charts/helpers'
 
 const route = useRoute()
@@ -211,8 +214,10 @@ const option = computed(() => {
     <Teleport defer to="#topbar-actions">
       <div class="daynav">
         <button class="arrow" type="button" aria-label="Previous day" @click="go(-1)"><Icon name="left" :size="18" /></button>
-        <input class="dateinput" type="date" :value="day" :max="today()" aria-label="Pick a day"
-          @change="(e) => router.replace(`/day/${(e.target as HTMLInputElement).value}`)" />
+        <DataCalendar mode="day" :value="day" :label="`Pick a day, ${longDay(day)} shown`" @pick="(v) => router.replace(`/day/${v}`)">
+          <span class="dateinput tnum">{{ shortDayYear(day) }}</span>
+          <Icon name="calendar" :size="15" />
+        </DataCalendar>
         <button class="arrow" type="button" aria-label="Next day" :disabled="day >= today()" @click="go(1)"><Icon name="right" :size="18" /></button>
       </div>
       <button class="btn small" type="button" :disabled="day === today()" @click="router.replace(`/day/${today()}`)">Today</button>
@@ -240,10 +245,13 @@ const option = computed(() => {
             <StateBlock :empty="!d.workouts.length" empty-text="No workouts on this day.">
               <ul class="list">
                 <li v-for="w in d.workouts" :key="w.id">
-                  <RouterLink :to="`/workouts/${w.id}`">
-                    <strong>{{ w.name }}</strong>
-                    <span class="text-2 small tnum">{{ time(w.start_ms) }} · {{ clock(w.duration_s) }} · avg {{ num(w.avg_hr_bpm) }} bpm ·
-                      {{ num(w.energy_kcal) }} kcal</span>
+                  <RouterLink :to="`/workouts/${w.id}`" class="workout">
+                    <IconBadge :name="workoutIcon(w.activity_type)" />
+                    <span class="wtext">
+                      <strong>{{ w.name }}</strong>
+                      <span class="text-2 small tnum">{{ time(w.start_ms) }} · {{ clock(w.duration_s) }} · avg {{ num(w.avg_hr_bpm) }} bpm ·
+                        {{ num(w.energy_kcal) }} kcal</span>
+                    </span>
                   </RouterLink>
                 </li>
               </ul>
@@ -290,18 +298,14 @@ const option = computed(() => {
   opacity: 0.35;
   cursor: default;
 }
+.daynav :deep(.dc-trigger) {
+  color: var(--text-2);
+}
 .dateinput {
-  height: 100%;
-  border: 0;
-  background: transparent;
   color: var(--text);
   font-weight: 600;
   font-size: 0.875rem;
-  padding: 0 4px;
-  color-scheme: dark;
-}
-.dateinput:focus {
-  outline: none;
+  white-space: nowrap;
 }
 .list {
   list-style: none;
@@ -323,6 +327,17 @@ const option = computed(() => {
 .list a:hover {
   text-decoration: none;
   outline: 1px solid var(--border-strong);
+}
+.list a.workout {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.wtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 .kv {
   display: grid;

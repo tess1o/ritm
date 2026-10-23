@@ -9,6 +9,8 @@ export interface Column<R> {
 }
 defineProps<{ rows: T[]; columns: Column<T>[]; rowKey: (row: T) => string | number; empty?: string }>()
 defineEmits<{ select: [row: T] }>()
+// `cell-<key>` replaces a column's text with custom markup, in both the table and the card list.
+defineSlots<Record<`cell-${string}`, (props: { row: T }) => unknown>>()
 </script>
 
 <template>
@@ -22,7 +24,9 @@ defineEmits<{ select: [row: T] }>()
       </thead>
       <tbody>
         <tr v-for="r in rows" :key="rowKey(r)" tabindex="0" @click="$emit('select', r)" @keydown.enter="$emit('select', r)">
-          <td v-for="c in columns" :key="c.key" :class="[c.align, 'tnum']">{{ c.value(r) }}</td>
+          <td v-for="c in columns" :key="c.key" :class="[c.align, 'tnum']">
+            <slot :name="`cell-${c.key}`" :row="r">{{ c.value(r) }}</slot>
+          </td>
         </tr>
       </tbody>
     </table>
@@ -31,7 +35,7 @@ defineEmits<{ select: [row: T] }>()
         <button type="button" @click="$emit('select', r)">
           <div class="primary">
             <template v-for="c in columns.filter((x) => x.primary)" :key="c.key">
-              <span>{{ c.value(r) }}</span>
+              <span><slot :name="`cell-${c.key}`" :row="r">{{ c.value(r) }}</slot></span>
             </template>
           </div>
           <dl>

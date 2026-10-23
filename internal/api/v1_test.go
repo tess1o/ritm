@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -91,6 +92,30 @@ func TestIngestKey(t *testing.T) {
 }
 
 // Errors are RFC 9457 problems; session writes need the CSRF header; ranges are validated.
+// The calendar marks the imported days and reports the last one.
+func TestCalendar(t *testing.T) {
+	o := synth.Options{Start: time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC), Days: 5, Loc: time.UTC, Seed: 3, HRIntervalSec: 1800}
+	s := newTestServer(t, true, o.Start.AddDate(0, 0, 30))
+	alice := s.register("alice")
+	info, _ := s.auth.UserByName(context.Background(), "alice")
+	tn, err := s.tenants.Get(context.Background(), info.User)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.importSynth(tn, o)
+
+	var cal DataCalendar
+	if code, _ := s.do("GET", "/api/v1/calendar?from=2026-08-01&to=2026-08-31", alice, nil, &cal); code != http.StatusOK {
+		t.Fatalf("calendar: %d", code)
+	}
+	if cal.From != "2026-08-01" || cal.To != "2026-08-31" || len(cal.Items) == 0 || cal.LastDay == nil || *cal.LastDay != cal.Items[len(cal.Items)-1].Day {
+		t.Fatalf("calendar %+v", cal)
+	}
+	if code, _ := s.do("GET", "/api/v1/calendar?from=2025-08-01&to=2025-08-31", alice, nil, &cal); code != http.StatusOK || len(cal.Items) != 0 || cal.LastDay == nil {
+		t.Fatalf("calendar before data: %d %+v", code, cal)
+	}
+}
+
 func TestProblemsAndCSRF(t *testing.T) {
 	s := newTestServer(t, true, time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC))
 	alice := s.register("alice")

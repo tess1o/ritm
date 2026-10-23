@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import Card from '../components/Card.vue'
 import Chart from '../components/Chart.vue'
 import DataTable, { type Column } from '../components/DataTable.vue'
+import IconBadge from '../components/IconBadge.vue'
 import KpiCard from '../components/KpiCard.vue'
 import MetricStrip, { type StripItem } from '../components/MetricStrip.vue'
 import StateBlock from '../components/StateBlock.vue'
@@ -14,6 +15,7 @@ import { usePeriodSwipe } from '../composables/useSwipe'
 import { get, qs } from '../lib/api'
 import { clock, loadModelName, monthLabel, num, shortDay, shortDayYear, time, today } from '../lib/fmt'
 import type { TrainingLoad, Weekly, WorkoutList, WorkoutSummary } from '../lib/types'
+import { workoutIcon } from '../lib/workouts'
 import { axisTooltip, color, dayAxis, goalLine, grid, legend, valueAxis } from '../charts/helpers'
 
 const router = useRouter()
@@ -236,10 +238,22 @@ const columns = computed<Column<WorkoutSummary>[]>(() => [
         <Card title="Workouts" :subtitle="workouts.data.value?.truncated ? 'Showing the latest 500' : undefined">
           <StateBlock :loading="workouts.loading.value" :error="workouts.error.value" :empty="false">
             <DataTable :rows="workouts.data.value?.items ?? []" :columns="columns" :row-key="(r) => r.id"
-              empty="No workouts in this period." @select="(r) => router.push(`/workouts/${r.id}`)" />
+              empty="No workouts in this period." @select="(r) => router.push(`/workouts/${r.id}`)">
+              <template #cell-type="{ row }">
+                <span class="type"><IconBadge :name="workoutIcon(row.activity_type)" :size="24" />{{ row.name }}</span>
+              </template>
+            </DataTable>
           </StateBlock>
         </Card>
       </template>
     </StateBlock>
   </div>
 </template>
+
+<style scoped>
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>

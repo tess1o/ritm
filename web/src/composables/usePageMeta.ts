@@ -4,6 +4,8 @@ import { onUnmounted, ref, watchEffect } from 'vue'
 // static title declare it in the route meta instead.
 export interface PageMeta {
   title?: string
+  /** Icon name shown in a badge before the title. */
+  icon?: string
   subtitle?: string
   back?: { to: string; label: string }
 }

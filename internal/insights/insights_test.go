@@ -56,7 +56,7 @@ func TestStepsTrend(t *testing.T) {
 		}
 	})
 	in := stepsTrend(&Ctx{fire, res()}, w)
-	if in == nil || in.Polarity != Attention || !strings.Contains(in.Body, "less {period}") {
+	if in == nil || in.Polarity != Attention || !strings.Contains(in.Title, "less {period}") {
 		t.Fatalf("expected attention insight, got %+v", in)
 	}
 	if in2 := stepsTrend(&Ctx{mkData(60, nil), res()}, w); in2 != nil {
@@ -93,7 +93,7 @@ func TestRestingSpike(t *testing.T) {
 		}
 	})
 	in := restingSpike(&Ctx{data, res()}, Period{Kind: Daily, Cur: days.Range{From: anchor, To: anchor}})
-	if in == nil || in.PeriodStart != anchor.Add(-2).String() || !strings.Contains(in.Body, "3 days") {
+	if in == nil || in.PeriodStart != anchor.Add(-2).String() || !strings.Contains(in.Title, "3 days") {
 		t.Fatalf("spike: %+v", in)
 	}
 	two := mkData(60, func(d days.Day, _ int, day *Day) {
@@ -115,12 +115,12 @@ func TestConsistency(t *testing.T) {
 		}
 	}
 	in := consistency(&Ctx{data, res()}, w)
-	if in == nil || in.Polarity != Positive || !strings.Contains(in.Body, "3-week streak") {
+	if in == nil || in.Polarity != Positive || !strings.Contains(in.Body, "3 weeks in a row") {
 		t.Fatalf("consistency: %+v", in)
 	}
 	data.Workouts = data.Workouts[3:] // drop this week's sessions
 	in = consistency(&Ctx{data, res()}, w)
-	if in == nil || in.Polarity != Attention || !strings.Contains(in.Body, "Only 0 sessions") {
+	if in == nil || in.Polarity != Attention || !strings.Contains(in.Title, "Only 0 sessions") {
 		t.Fatalf("missed sessions: %+v", in)
 	}
 }
@@ -133,7 +133,7 @@ func TestSleepAndHRV(t *testing.T) {
 			day.HRV = 60
 		}
 	})
-	if in := sleepTrend(&Ctx{data, res()}, w); in == nil || !strings.Contains(in.Body, "6 h 10 min {period} vs 7 h 0 min") {
+	if in := sleepTrend(&Ctx{data, res()}, w); in == nil || !strings.Contains(in.Title, "6 h 10 min {period}") || !strings.Contains(in.Body, "Usually 7 h 0 min") {
 		t.Fatalf("sleep: %+v", in)
 	}
 	if in := hrvTrend(&Ctx{data, res()}, w); in == nil || in.Polarity != Positive {

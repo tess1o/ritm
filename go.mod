@@ -6,6 +6,7 @@ go 1.26.0
 ignore ./web/node_modules
 
 require (
+	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/term v0.47.0
@@ -13,7 +14,6 @@ require (
 )
 
 require (
-	github.com/danielgtaylor/huma/v2 v2.39.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect

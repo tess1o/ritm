@@ -107,9 +107,8 @@ func stepsTrend(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur > base, Positive, Attention),
 		Title:    fmt.Sprintf("You walked %s %s {period}", pctStr(d), moreLess(d)),
-		Body: fmt.Sprintf("You walked %s %s {period} than your 4-week average (%s vs %s steps/day).",
-			pctStr(d), moreLess(d), num(cur, 0), num(base, 0)),
-		Metric: "steps", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
+		Body:     fmt.Sprintf("%s vs %s steps/day, your 4-week average.", num(cur, 0), num(base, 0)),
+		Metric:   "steps", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
 		Evidence: map[string]any{"days_with_data": n, "baseline_weeks": 4, "baseline_weekly_sd": round1(sd), "unit": "steps/day"},
 	}
 }
@@ -127,9 +126,8 @@ func kcalTrend(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur > base, Positive, Attention),
 		Title:    fmt.Sprintf("Active calories are %s %s your usual level", pctStr(d), aboveBelow(d)),
-		Body: fmt.Sprintf("Active calories averaged %s kcal/day {period}, %s %s your 4-week average of %s kcal/day.",
-			num(cur, 0), pctStr(d), aboveBelow(d), num(base, 0)),
-		Metric: "active_kcal", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
+		Body:     fmt.Sprintf("%s vs %s kcal/day, your 4-week average.", num(cur, 0), num(base, 0)),
+		Metric:   "active_kcal", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
 		Evidence: map[string]any{"days_with_data": n, "baseline_weekly_sd": round1(sd), "unit": "kcal/day"},
 	}
 }
@@ -158,8 +156,8 @@ func monthlyTrend(metric string, m Metric, rel, abs float64, unit string, scale 
 		return &Insight{
 			Polarity: pick((cur > base) == upGood, Positive, Attention),
 			Title:    fmt.Sprintf("%s %s %s {period}", label, upDown(d), pctStr(d)),
-			Body: fmt.Sprintf("%s %s %s {period} (%s vs %s %s; 90-day median %s).",
-				label, upDown(d), pctStr(d), show(cur), show(base), unit, show(med90)),
+			Body: fmt.Sprintf("%s vs %s %s in the 28 days before; 90-day median %s.",
+				show(cur), show(base), unit, show(med90)),
 			Metric: metric, Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
 			Evidence: map[string]any{"previous_period": rangeMap(prev), "median_90d": fp(med90), "baseline_weekly_sd": round1(sd)},
 		}
@@ -199,7 +197,7 @@ func goalAttainment(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(float64(cur) > usual, Positive, Attention),
 		Title:    fmt.Sprintf("Step goal reached on %d of %d days", cur, total),
-		Body:     fmt.Sprintf("Step goal (%s) reached on %d of %d days {period} (usual: %s).", num(goal, 0), cur, total, num(usual, 0)),
+		Body:     fmt.Sprintf("Goal %s steps; usually reached on %s days a week.", num(goal, 0), num(usual, 0)),
 		Metric:   "step_goal_days", Current: fp(float64(cur)), Baseline: fp(usual), DeltaPct: fp(pctDelta(float64(cur), usual)),
 		Evidence: map[string]any{"goal_steps": goal, "days_with_data": total},
 	}
@@ -224,9 +222,8 @@ func sedentary(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur > base, Attention, Positive),
 		Title:    fmt.Sprintf("Longest sitting stretch %s on workdays", pick(cur > base, "grew", "shrank")),
-		Body: fmt.Sprintf("Average longest sitting stretch %s from %s h to %s h on workdays {period}.",
-			pick(cur > base, "grew", "shrank"), num(base, 1), num(cur, 1)),
-		Metric: "longest_sedentary_h", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
+		Body:     fmt.Sprintf("%s h → %s h on average, compared with the 28 days before.", num(base, 1), num(cur, 1)),
+		Metric:   "longest_sedentary_h", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		Evidence: map[string]any{"workdays": len(curV), "previous_workdays": len(baseV), "previous_period": rangeMap(prev)},
 	}
 }
@@ -250,9 +247,9 @@ func weekdayWeekend(c *Ctx, p Period) *Insight {
 	}
 	var body string
 	if ratio >= 1 {
-		body = fmt.Sprintf("Weekend days have %s× more steps than workdays (%s vs %s steps/day).", num(ratio, 1), num(e, 0), num(w, 0))
+		body = fmt.Sprintf("%s× the steps of workdays: %s vs %s steps/day.", num(ratio, 1), num(e, 0), num(w, 0))
 	} else {
-		body = fmt.Sprintf("Workdays have %s× more steps than weekend days (%s vs %s steps/day).", num(1/ratio, 1), num(w, 0), num(e, 0))
+		body = fmt.Sprintf("%s× the steps of weekend days: %s vs %s steps/day.", num(1/ratio, 1), num(w, 0), num(e, 0))
 	}
 	return &Insight{
 		Polarity: Neutral,
@@ -279,9 +276,8 @@ func gymVsRest(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: Neutral,
 		Title:    fmt.Sprintf("Non-gym days average %s steps", num(r, 0)),
-		Body: fmt.Sprintf("Non-gym days average %s steps vs %s on gym days — consider short walks on those days.",
-			num(r, 0), num(g, 0)),
-		Metric: "steps_non_gym_days", Current: fp(r), Baseline: fp(g), DeltaPct: fp(pctDelta(r, g)),
+		Body:     fmt.Sprintf("Gym days average %s — consider short walks on the other days.", num(g, 0)),
+		Metric:   "steps_non_gym_days", Current: fp(r), Baseline: fp(g), DeltaPct: fp(pctDelta(r, g)),
 		Evidence: map[string]any{"gym_days": len(gym), "non_gym_days": len(rest), "goal_steps": goal},
 	}
 }
@@ -310,7 +306,7 @@ func rings(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(closed >= 5, Positive, Attention),
 		Title:    fmt.Sprintf("Move ring closed %d/%d days", closed, n),
-		Body:     fmt.Sprintf("Move ring closed %d/%d days {period} (exercise %d/%d, stand %d/%d).", closed, n, ex, n, stand, n),
+		Body:     fmt.Sprintf("Exercise ring %d/%d, stand ring %d/%d.", ex, n, stand, n),
 		Metric:   "move_ring_days", Current: fp(float64(closed)),
 		Evidence: map[string]any{"days": n, "exercise_closed": ex, "stand_closed": stand},
 	}
@@ -335,9 +331,9 @@ func bpmTrend(metric string, m Metric, label string, abs float64) func(*Ctx, Per
 		if metric == "walking_hr" {
 			word = pick(delta < 0, "decreased", "increased")
 		}
-		body := fmt.Sprintf("%s %s by %s bpm over 2 months (%s → %s).", label, word, num(math.Abs(delta), 0), num(b, 0), num(cur, 0))
+		body := fmt.Sprintf("%s → %s bpm, compared with the 2 months before.", num(b, 0), num(cur, 0))
 		if metric == "walking_hr" && delta < 0 {
-			body = fmt.Sprintf("%s decreased %s bpm (%s → %s) — a sign of improved fitness.", label, num(-delta, 0), num(b, 0), num(cur, 0))
+			body = fmt.Sprintf("%s → %s bpm — a sign of improved fitness.", num(b, 0), num(cur, 0))
 		}
 		return &Insight{
 			Polarity: pick(delta < 0, Positive, Attention),
@@ -377,7 +373,7 @@ func restingSpike(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: Attention,
 		Title:    fmt.Sprintf("Resting HR elevated for %d days", n),
-		Body:     fmt.Sprintf("Resting HR has been 5+ bpm above baseline for %d days (%s vs %s bpm).", n, num(cur, 0), num(base, 0)),
+		Body:     fmt.Sprintf("%s vs %s bpm — 5+ bpm above your baseline each day.", num(cur, 0), num(base, 0)),
 		Metric:   "resting_hr", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		PeriodStart: start.String(), PeriodEnd: end.String(),
 		Evidence: map[string]any{"days": n, "baseline_days": len(baseV), "threshold_bpm": 5},
@@ -396,16 +392,15 @@ func hrvTrend(c *Ctx, p Period) *Insight {
 		return nil
 	}
 	d := pctDelta(cur, base)
-	suffix := ""
+	suffix := "."
 	if d > 0 {
-		suffix = " — good recovery"
+		suffix = " — good recovery."
 	}
 	return &Insight{
 		Polarity: pick(d > 0, Positive, Attention),
 		Title:    fmt.Sprintf("HRV is %s %s your 90-day median", pctStr(d), aboveBelow(d)),
-		Body: fmt.Sprintf("HRV is %s %s your 90-day median%s (%s vs %s ms).", pctStr(d), aboveBelow(d), suffix,
-			num(cur, 0), num(base, 0)),
-		Metric: "hrv_sdnn", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
+		Body:     fmt.Sprintf("%s vs %s ms%s", num(cur, 0), num(base, 0), suffix),
+		Metric:   "hrv_sdnn", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(d),
 		Evidence: map[string]any{"days_with_data": len(cv), "baseline_days": len(bv), "unit": "ms"},
 	}
 }
@@ -424,7 +419,7 @@ func vo2Change(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur > base, Positive, Attention),
 		Title:    fmt.Sprintf("VO2max estimate %s", pick(cur > base, "rose", "fell")),
-		Body:     fmt.Sprintf("VO2max estimate %s from %s to %s.", pick(cur > base, "rose", "fell"), num(base, 1), num(cur, 1)),
+		Body:     fmt.Sprintf("%s → %s mL/(kg·min), compared with the 13 weeks before.", num(base, 1), num(cur, 1)),
 		Metric:   "vo2max", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		Evidence: map[string]any{"samples": len(cv), "previous_samples": len(bv), "previous_period": rangeMap(prev), "unit": "mL/(kg·min)"},
 	}
@@ -443,7 +438,7 @@ func heartEvents(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: Neutral,
 		Title:    fmt.Sprintf("%d heart notification%s {period}", n, plural(n)),
-		Body:     fmt.Sprintf("%d heart rate notification%s (high, low or irregular rhythm) {period}. See the Heart page for details.", n, plural(n)),
+		Body:     "High, low or irregular rhythm alerts. See the Heart page for details.",
 		Metric:   "heart_events", Current: fp(float64(n)),
 	}
 }
@@ -461,7 +456,7 @@ func consistency(c *Ctx, p Period) *Insight {
 		return &Insight{
 			Polarity: Positive,
 			Title:    fmt.Sprintf("%d/%d sessions {period}", sessions, target),
-			Body:     fmt.Sprintf("%d/%d sessions {period} — %d-week streak.", sessions, target, streak),
+			Body:     pick(streak > 1, fmt.Sprintf("Target met %d weeks in a row.", streak), "Weekly target met."),
 			Metric:   "sessions", Current: fp(float64(sessions)), Baseline: fp(float64(target)),
 			Evidence: map[string]any{"target": target, "streak_weeks": streak},
 		}
@@ -472,7 +467,7 @@ func consistency(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: Attention,
 		Title:    fmt.Sprintf("Only %d session%s {period}", sessions, plural(sessions)),
-		Body:     fmt.Sprintf("Only %d session%s {period} (target %d).", sessions, plural(sessions), target),
+		Body:     fmt.Sprintf("Your target is %d a week.", target),
 		Metric:   "sessions", Current: fp(float64(sessions)), Baseline: fp(float64(target)),
 		Evidence: map[string]any{"target": target},
 	}
@@ -503,7 +498,7 @@ func monthlyVolume(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pol,
 		Title:    fmt.Sprintf("%d sessions / %s h {period}", cn, num(ch, 1)),
-		Body:     fmt.Sprintf("%d sessions / %s h {period} vs %d / %s h in the 28 days before.", cn, num(ch, 1), pn, num(ph, 1)),
+		Body:     fmt.Sprintf("%d sessions / %s h in the 28 days before.", pn, num(ph, 1)),
 		Metric:   "training_hours", Current: fp(ch), Baseline: fp(ph), DeltaPct: fp(pctDelta(ch, ph)),
 		Evidence: map[string]any{"sessions": cn, "previous_sessions": pn, "previous_period": rangeMap(prev)},
 	}
@@ -531,9 +526,8 @@ func intensity(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: Neutral,
 		Title:    fmt.Sprintf("Average session intensity %s", pick(cur > base, "rose", "fell")),
-		Body: fmt.Sprintf("Average session intensity %s: %s%% of time in zone 3+ (was %s%%).",
-			pick(cur > base, "rose", "fell"), num(cur, 0), num(base, 0)),
-		Metric: "pct_z3_plus", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
+		Body:     fmt.Sprintf("%s %% of session time in zone 3+, was %s %%.", num(cur, 0), num(base, 0)),
+		Metric:   "pct_z3_plus", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		Evidence: map[string]any{"sessions": cn, "previous_sessions": bn},
 	}
 }
@@ -560,8 +554,8 @@ func sessionHR(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur < base, Positive, Neutral),
 		Title:    fmt.Sprintf("Gym session HR %s %s bpm", upDown(cur-base), num(math.Abs(cur-base), 0)),
-		Body: fmt.Sprintf("Average HR in gym sessions %s %s bpm over 8 weeks at similar duration (%s → %s bpm, ~%s min sessions).",
-			upDown(cur-base), num(math.Abs(cur-base), 0), num(base, 0), num(cur, 0), num(med/60, 0)),
+		Body: fmt.Sprintf("%s → %s bpm over 8 weeks, comparing sessions of similar length (~%s min).",
+			num(base, 0), num(cur, 0), num(med/60, 0)),
 		Metric: "session_avg_hr", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		Evidence: map[string]any{"sessions": cn, "baseline_sessions": bn, "baseline_period": rangeMap(p.Prev(2)), "median_duration_min": round1(med / 60)},
 	}
@@ -576,21 +570,21 @@ func loadForm(c *Ctx, p Period) *Insight {
 	case !math.IsNaN(day.ACWR) && day.ACWR >= 1.5:
 		return &Insight{
 			Polarity: Attention, Title: fmt.Sprintf("Training load jumped (ACWR %s)", num(day.ACWR, 1)),
-			Body:   fmt.Sprintf("Training load jumped (ACWR %s) — watch recovery.", num(day.ACWR, 1)),
+			Body:   "Recent load is well above your usual level — watch recovery.",
 			Metric: "acwr", Current: fp(day.ACWR),
 			Evidence: map[string]any{"ctl": round1(day.CTL), "atl": round1(day.ATL), "tsb": round1(day.TSB)},
 		}
 	case !math.IsNaN(day.ACWR) && day.ACWR > 0 && day.ACWR <= 0.6:
 		return &Insight{
 			Polarity: Neutral, Title: fmt.Sprintf("Training load dropped (ACWR %s)", num(day.ACWR, 1)),
-			Body:   fmt.Sprintf("Training load {period} is well below your recent level (ACWR %s).", num(day.ACWR, 1)),
+			Body:   "Recent load is well below your usual level.",
 			Metric: "acwr", Current: fp(day.ACWR),
 			Evidence: map[string]any{"ctl": round1(day.CTL), "atl": round1(day.ATL), "tsb": round1(day.TSB)},
 		}
 	case !math.IsNaN(day.TSB) && day.TSB > 5 && day.CTL > 10:
 		return &Insight{
 			Polarity: Positive, Title: "Form is positive",
-			Body:   fmt.Sprintf("Form is positive (TSB %s) — well recovered.", num(day.TSB, 0)),
+			Body:   fmt.Sprintf("TSB %s — well recovered.", num(day.TSB, 0)),
 			Metric: "tsb", Current: fp(day.TSB),
 			Evidence: map[string]any{"ctl": round1(day.CTL), "atl": round1(day.ATL), "acwr": fp(day.ACWR)},
 		}
@@ -609,9 +603,8 @@ func durationDrift(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur < b, Attention, Neutral),
 		Title:    fmt.Sprintf("Sessions are getting %s", pick(cur < b, "shorter", "longer")),
-		Body: fmt.Sprintf("Sessions are getting %s: %s min avg vs %s min.", pick(cur < b, "shorter", "longer"),
-			num(cur/60, 0), num(b/60, 0)),
-		Metric: "session_duration_min", Current: fp(cur / 60), Baseline: fp(b / 60), DeltaPct: fp(pctDelta(cur, b)),
+		Body:     fmt.Sprintf("%s min on average vs %s min in the 8 weeks before.", num(cur/60, 0), num(b/60, 0)),
+		Metric:   "session_duration_min", Current: fp(cur / 60), Baseline: fp(b / 60), DeltaPct: fp(pctDelta(cur, b)),
 		Evidence: map[string]any{"sessions": cn, "baseline_sessions": bn, "baseline_period": rangeMap(base)},
 	}
 }
@@ -683,7 +676,7 @@ func sleepTrend(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(cur < base, Attention, Positive),
 		Title:    fmt.Sprintf("Average sleep %s {period}", hm(cur)),
-		Body:     fmt.Sprintf("Average sleep %s {period} vs %s usual.", hm(cur), hm(base)),
+		Body:     fmt.Sprintf("Usually %s.", hm(base)),
 		Metric:   "asleep_min", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),
 		Evidence: map[string]any{"nights": len(cv), "baseline_weekly_sd_min": round1(sd)},
 	}
@@ -712,7 +705,7 @@ func sleepHRV(c *Ctx, p Period) *Insight {
 	return &Insight{
 		Polarity: pick(d < 0, Attention, Neutral),
 		Title:    fmt.Sprintf("Short nights are followed by %s %s HRV", pctStr(d), pick(d < 0, "lower", "higher")),
-		Body:     fmt.Sprintf("Nights under 6 h are followed by %s %s HRV (%s vs %s ms).", pctStr(d), pick(d < 0, "lower", "higher"), num(mathx.Mean(short), 0), num(mathx.Mean(normal), 0)),
+		Body:     fmt.Sprintf("%s vs %s ms after nights under 6 h and other nights.", num(mathx.Mean(short), 0), num(mathx.Mean(normal), 0)),
 		Metric:   "hrv_after_short_sleep", Current: fp(mathx.Mean(short)), Baseline: fp(mathx.Mean(normal)), DeltaPct: fp(d),
 		Evidence: map[string]any{"short_nights": len(short), "other_nights": len(normal)},
 	}
