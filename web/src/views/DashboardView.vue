@@ -105,10 +105,13 @@ const scores = computed(() => {
     <StateBlock :loading="ov.loading.value" :error="ov.error.value" :empty="!o" :height="300">
       <Card v-if="noData" title="No data yet">
         <p class="text-2">
-          Export your Health data on the iPhone (Health → profile → Export All Health Data), then upload the
-          <code>export.zip</code> here.
+          Ritm reads the Health export from your iPhone. Connect the iPhone Shortcut once and send each export straight from the
+          Health share sheet — or export by hand (Health → profile → Export All Health Data) and upload the <code>export.zip</code>.
         </p>
-        <div><RouterLink to="/import" class="btn primary"><Icon name="upload" /> Import export.zip</RouterLink></div>
+        <div class="row">
+          <RouterLink to="/import?connect=iphone" class="btn primary"><Icon name="phone" /> Connect iPhone</RouterLink>
+          <RouterLink to="/import" class="btn"><Icon name="upload" /> Upload export.zip</RouterLink>
+        </div>
       </Card>
 
       <template v-else-if="o">

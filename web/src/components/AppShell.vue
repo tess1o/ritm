@@ -8,6 +8,7 @@ import IconBadge from './IconBadge.vue'
 import PeriodPicker from './PeriodPicker.vue'
 import { useAuth } from '../composables/useAuth'
 import { useFreshness } from '../composables/useFreshness'
+import { useIphoneShortcut } from '../composables/useKeys'
 import { usePageMeta } from '../composables/usePageMeta'
 
 const props = defineProps<{ hasSleep: boolean }>()
@@ -16,6 +17,9 @@ const { user, version, logout } = useAuth()
 const fresh = useFreshness()
 const pageMeta = usePageMeta()
 watch(() => route.fullPath, () => fresh.load(), { immediate: true })
+// Until an iPhone is connected the Data group offers it; the item goes away once a Shortcut key exists.
+const iphone = useIphoneShortcut()
+iphone.load()
 
 type Item = { to: string; name: string; label: string; icon: string }
 const groups = computed<{ label?: string; items: Item[] }[]>(() => [
@@ -39,6 +43,9 @@ const groups = computed<{ label?: string; items: Item[] }[]>(() => [
   {
     label: 'Data',
     items: [
+      ...(iphone.known.value && !iphone.connected.value
+        ? [{ to: '/import?connect=iphone', name: 'connect-iphone', label: 'Connect iPhone', icon: 'phone' }]
+        : []),
       { to: '/import', name: 'import', label: 'Import', icon: 'upload' },
       { to: '/assistant', name: 'assistant', label: 'AI assistants', icon: 'bot' },
       { to: '/settings', name: 'settings', label: 'Settings', icon: 'settings' },

@@ -11,3 +11,4 @@ web/dist/*
 # screenshots of the running app contain personal health data
 docs/*.png
 /.idea/
+/.claude

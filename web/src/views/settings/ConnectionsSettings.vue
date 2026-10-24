@@ -70,10 +70,11 @@ const label = (k: ApiKey) => CLIENTS[k.scope]?.label ?? k.scope
           <span v-if="s === 'monitor' && kuma && activeFor(s).length" class="chip" :class="kuma.ok ? 'positive' : 'attention'">{{ kuma.code }}</span>
         </div>
         <label v-if="s === 'read'" class="check small">
-          <input v-model="form.allow_sql" type="checkbox" /> Allow read-only SQL queries over MCP (<code>query_sql</code>) for every read key
+          <input v-model="form.allow_sql" type="checkbox" />
+          <span>Allow read-only SQL queries over MCP (<code>query_sql</code>) for every read key</span>
         </label>
         <button class="btn small" :class="{ primary: !activeFor(s).length }" type="button" @click="openGuide(s)">
-          {{ activeFor(s).length ? 'Add key / show setup' : 'Set up' }}
+          {{ !activeFor(s).length ? 'Set up' : s === 'ingest' ? 'Connect an iPhone' : 'Add key / show setup' }}
         </button>
       </article>
     </div>
@@ -110,7 +111,7 @@ const label = (k: ApiKey) => CLIENTS[k.scope]?.label ?? k.scope
 
     <SaveBar :dirty="dirty" :saving="saving" @discard="discard" />
 
-    <ConnectionGuide v-if="guide" :scope="guide" :base="baseURL" :secret="created?.secret ?? null" :busy="creating"
+    <ConnectionGuide v-if="guide" :scope="guide" :base="baseURL" :shortcut-url="server?.shortcut_url ?? ''" :secret="created?.secret ?? null" :busy="creating"
       :active="activeFor(guide).length" @generate="generate" @close="closeGuide" />
   </form>
 </template>

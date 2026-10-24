@@ -1809,6 +1809,9 @@ components:
           description: RITM_MAX_UPLOAD_MB
           format: int64
           type: integer
+        shortcut_url:
+          description: "RITM_SHORTCUT_URL: iCloud link of the Send to Ritm iPhone shortcut"
+          type: string
         stale_after_hours:
           description: RITM_STALE_AFTER
           format: double
@@ -1822,6 +1825,7 @@ components:
         - timezone
         - base_url
         - max_upload_mb
+        - shortcut_url
       type: object
     Session:
       additionalProperties: false

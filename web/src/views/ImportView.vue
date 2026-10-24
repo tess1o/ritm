@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Card from '../components/Card.vue'
 import FileDrop from '../components/FileDrop.vue'
+import Icon from '../components/Icon.vue'
 import ProgressBar from '../components/ProgressBar.vue'
 import StateBlock from '../components/StateBlock.vue'
 import { useAsync } from '../composables/useAsync'
 import { useFreshness } from '../composables/useFreshness'
 import { useImport } from '../composables/useImport'
+import { useIphoneShortcut, useKeys } from '../composables/useKeys'
 import { useSettings } from '../composables/useSettings'
 import { useSleepAvailable } from '../composables/useSleepAvailable'
 import { get } from '../lib/api'
-import { bytes, dateTime, num, typeName } from '../lib/fmt'
+import { ago, bytes, dateTime, num, typeName } from '../lib/fmt'
 import type { ImportRow, ImportStats, Items } from '../lib/types'
+import { SHORTCUT_NAME } from './settings/clients'
+import ConnectionGuide from './settings/ConnectionGuide.vue'
 
 const imp = useImport()
 const full = ref(false)
@@ -62,12 +67,55 @@ function totals(s?: ImportStats) {
   }
   return { ins, dup, below }
 }
+// The iPhone Shortcut: the easier way in, so it leads the page. /import?connect=iphone (the nav item) opens its guide.
+const iphone = useIphoneShortcut()
+iphone.load()
+const { created, creating, create } = useKeys()
+const guide = ref(false)
+const baseURL = computed(() => String(settings.data.value?.server.base_url || window.location.origin))
+function openGuide() {
+  settings.load()
+  created.value = null
+  guide.value = true
+}
+function closeGuide() {
+  guide.value = false
+  created.value = null
+}
+const route = useRoute()
+const router = useRouter()
+watch(
+  () => route.query.connect,
+  (c) => {
+    if (c !== 'iphone') return
+    openGuide()
+    router.replace({ query: {} })
+  },
+  { immediate: true },
+)
+
 const latest = computed(() => imp.result.value ?? history.data.value?.items[0] ?? null)
 const showTypes = ref(false)
 </script>
 
 <template>
   <div class="page">
+    <section v-if="iphone.known.value && !iphone.connected.value" class="shortcut">
+      <span class="sicon"><Icon name="phone" :size="22" /></span>
+      <div class="stext">
+        <strong>Send exports straight from your iPhone</strong>
+        <p class="small text-2">Add the <em>{{ SHORTCUT_NAME }}</em> shortcut once, then pick it in the Health share sheet — no computer, no
+          file to move. Takes a minute to set up.</p>
+      </div>
+      <button class="btn primary" type="button" @click="openGuide"><Icon name="phone" :size="16" /> Connect iPhone</button>
+    </section>
+    <div v-else-if="iphone.connected.value" class="shortcut connected small">
+      <span class="chip positive"><Icon name="check" :size="12" /> iPhone Shortcut connected</span>
+      <span class="muted">{{ iphone.lastUsed.value ? `last upload ${ago(iphone.lastUsed.value)}` : 'no upload yet' }}</span>
+      <span class="spacer" />
+      <button class="btn small ghost" type="button" @click="openGuide">Setup</button>
+      <RouterLink :to="{ name: 'settings-connections' }" class="btn small ghost">Manage</RouterLink>
+    </div>
 
     <div class="cols-2">
       <Card title="Upload Apple Health export">
@@ -95,6 +143,7 @@ const showTypes = ref(false)
           <li>Choose <strong>Save to Files</strong> (e.g. iCloud Drive), or AirDrop it to your computer.</li>
           <li>Upload <code>export.zip</code> here. Re-uploading a newer full export only adds new data.</li>
         </ol>
+        <p v-if="iphone.connected.value" class="small text-2">Or tap <strong>{{ SHORTCUT_NAME }}</strong> in the share sheet in step 3.</p>
       </Card>
     </div>
 
@@ -148,10 +197,51 @@ const showTypes = ref(false)
         </ul>
       </StateBlock>
     </Card>
+
+    <ConnectionGuide v-if="guide" scope="ingest" :base="baseURL" :shortcut-url="settings.data.value?.server.shortcut_url ?? ''"
+      :secret="created?.secret ?? null" :busy="creating" :active="iphone.active.value.length"
+      @generate="(name) => create(name, 'ingest')" @close="closeGuide" />
   </div>
 </template>
 
 <style scoped>
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--accent-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.shortcut.connected {
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+}
+.sicon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--accent);
+}
+.stext {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.stext p {
+  margin: 2px 0 0;
+}
+@media (max-width: 520px) {
+  .sicon {
+    display: none;
+  }
+}
 .progress {
   display: flex;
   flex-direction: column;

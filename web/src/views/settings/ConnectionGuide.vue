@@ -3,12 +3,13 @@
 import { computed, ref } from 'vue'
 import Icon from '../../components/Icon.vue'
 import Modal from '../../components/Modal.vue'
+import QrCode from '../../components/QrCode.vue'
 import { useCopy } from '../../composables/useKeys'
 import { API_BASE } from '../../lib/api'
 import type { KeyScope } from '../../lib/types'
-import { CLIENTS } from './clients'
+import { CLIENTS, SHORTCUT_NAME, shortcutConnectURL } from './clients'
 
-const props = defineProps<{ scope: KeyScope; base: string; secret: string | null; busy: boolean; active: number }>()
+const props = defineProps<{ scope: KeyScope; base: string; shortcutUrl: string; secret: string | null; busy: boolean; active: number }>()
 const emit = defineEmits<{ close: []; generate: [name: string] }>()
 const copy = useCopy()
 
@@ -16,6 +17,7 @@ const client = computed(() => CLIENTS[props.scope])
 const name = ref(client.value.defaultName)
 const token = computed(() => props.secret ?? 'ritm_…')
 const uploadURL = computed(() => `${props.base}${API_BASE}/imports`)
+const connectURL = computed(() => shortcutConnectURL(uploadURL.value, props.secret ?? ''))
 const freshnessURL = computed(() => `${props.base}${API_BASE}/monitor/freshness`)
 const healthURL = computed(() => `${props.base}/healthz`)
 const overviewURL = computed(() => `${props.base}${API_BASE}/overview?period=last_7d`)
@@ -24,7 +26,7 @@ const mcpConfig = computed(() => JSON.stringify({ mcpServers: { ritm: { type: 'h
 
 <template>
   <Modal :title="`Connect ${client.label}`" @close="emit('close')">
-    <section class="step">
+    <section v-if="scope !== 'ingest'" class="step">
       <h3><span class="num">1</span> Generate a key</h3>
       <template v-if="!secret">
         <p class="small text-2">
@@ -45,28 +47,81 @@ const mcpConfig = computed(() => JSON.stringify({ mcpServers: { ritm: { type: 'h
       </template>
     </section>
 
-    <section v-if="scope === 'ingest'" class="step">
-      <h3><span class="num">2</span> Create the shortcut</h3>
-      <ol class="steps small text-2">
-        <li>In Shortcuts, create a shortcut that shows in the Share Sheet and receives <strong>Files</strong>.</li>
-        <li>Add <strong>Get Contents of URL</strong> with method <strong>POST</strong> and request body <strong>File</strong> = Shortcut Input.</li>
-        <li>Add the headers below.</li>
-        <li>After exporting in Health, share <code>export.zip</code> to the shortcut. Progress shows on the <RouterLink to="/import" @click="emit('close')">Import</RouterLink> page.</li>
-      </ol>
-      <div class="copyline">
-        <code>POST {{ uploadURL }}</code>
-        <button class="btn small icon-btn" type="button" aria-label="Copy upload URL" @click="copy(uploadURL)"><Icon name="copy" :size="16" /></button>
-      </div>
-      <pre>Authorization: Bearer {{ token }}
+    <!-- iPhone: on a computer the steps are QR codes to scan, on the phone itself buttons to tap. -->
+    <template v-if="scope === 'ingest'">
+      <section class="step">
+        <h3><span class="num">1</span> Install {{ SHORTCUT_NAME }} on the iPhone</h3>
+        <div v-if="shortcutUrl" class="qrline">
+          <QrCode class="on-computer" :value="shortcutUrl" :label="`QR code: get the ${SHORTCUT_NAME} shortcut`" />
+          <div class="qrtext">
+            <p class="small text-2 on-computer">Scan this code with the iPhone Camera, then tap <strong>Add Shortcut</strong>.</p>
+            <p class="small text-2 on-phone">Open the shortcut's page, then tap <strong>Add Shortcut</strong>.</p>
+            <a class="btn on-phone" :href="shortcutUrl" target="_blank" rel="noopener"><Icon name="phone" :size="16" /> Get the shortcut</a>
+            <p class="muted small">Already installed? Go to step 2. Keep the name <strong>{{ SHORTCUT_NAME }}</strong> — step 2 runs it by name.</p>
+          </div>
+        </div>
+        <p v-else class="small text-2">Build <strong>{{ SHORTCUT_NAME }}</strong> once on the iPhone, as described under
+          <em>Building the shortcut</em> in the Ritm README. Keep that exact name: step 2 runs it by name.</p>
+      </section>
+
+      <section class="step">
+        <h3><span class="num">2</span> Connect it to this server</h3>
+        <template v-if="!secret">
+          <p class="small text-2">Ritm creates a key for the shortcut and puts it, with this server's address, into a code the iPhone opens.
+            {{ client.keyNote }}</p>
+          <p v-if="active" class="small text-2">You have {{ active }} iPhone Shortcut key{{ active > 1 ? 's' : '' }}. A key is shown only when
+            it is created, so connecting again makes a new one — revoke keys you no longer use under <em>API keys</em>.</p>
+          <button class="btn primary start" type="button" :disabled="busy" @click="emit('generate', client.defaultName)">
+            <Icon name="key" :size="16" /> Create key and connect
+          </button>
+        </template>
+        <div v-else class="qrline">
+          <QrCode class="on-computer" :value="connectURL" :label="`QR code: connect ${SHORTCUT_NAME} to this server`" />
+          <div class="qrtext">
+            <p class="small text-2 on-computer">Scan this code with the iPhone Camera and open it in Shortcuts.</p>
+            <a class="btn primary on-phone" :href="connectURL"><Icon name="check" :size="16" /> Connect shortcut</a>
+            <p class="small text-2">The shortcut checks the address and key, saves them, and shows <em>Connected to Ritm</em>.</p>
+            <p class="muted small">The code holds the key and is shown only now — don't share a screenshot of it.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="step">
+        <h3><span class="num">3</span> Send an export</h3>
+        <ol class="steps small text-2">
+          <li>In <strong>Health</strong>, tap your profile picture → <strong>Export All Health Data</strong> → <strong>Export</strong>.</li>
+          <li>In the share sheet, tap <strong>{{ SHORTCUT_NAME }}</strong>. Stay in Shortcuts until the <em>import started</em> notification.</li>
+          <li>Progress shows on the <RouterLink to="/import" @click="emit('close')">Import</RouterLink> page. Only new data is stored.</li>
+        </ol>
+        <p class="muted small">The shortcut keeps the last export as iCloud Drive → Shortcuts → Ritm-export.zip. Run it from the Shortcuts app
+          to resend it if an upload failed, or save exports under that name and let a nightly automation send them.</p>
+      </section>
+
+      <details class="step">
+        <summary class="small">Set up manually instead</summary>
+        <div v-if="secret" class="copyline secret">
+          <code>{{ secret }}</code>
+          <button class="btn small icon-btn" type="button" aria-label="Copy key" @click="copy(secret)"><Icon name="copy" :size="16" /></button>
+        </div>
+        <p v-else class="small text-2">Create a key in step 2 and it is filled in below.</p>
+        <ol class="steps small text-2">
+          <li>In Shortcuts, create a shortcut that shows in the Share Sheet and receives <strong>Files</strong>.</li>
+          <li>Add <strong>Get Contents of URL</strong> with method <strong>POST</strong> and request body <strong>File</strong> = Shortcut Input.</li>
+          <li>Add the headers below.</li>
+        </ol>
+        <div class="copyline">
+          <code>POST {{ uploadURL }}</code>
+          <button class="btn small icon-btn" type="button" aria-label="Copy upload URL" @click="copy(uploadURL)"><Icon name="copy" :size="16" /></button>
+        </div>
+        <pre>Authorization: Bearer {{ token }}
 X-File-Name: export.zip</pre>
-      <details>
-        <summary class="small">Or upload with curl</summary>
+        <p class="small text-2">Or upload with curl:</p>
         <pre>curl -H "Authorization: Bearer {{ token }}" -H "X-File-Name: export.zip" \
   --data-binary @export.zip {{ uploadURL }}</pre>
       </details>
       <p class="muted small">An ingest key can only upload exports and read their import status. The API is described at
         <a :href="`${API_BASE}/docs`" target="_blank" rel="noopener">{{ API_BASE }}/docs</a>.</p>
-    </section>
+    </template>
 
     <section v-else-if="scope === 'monitor'" class="step">
       <h3><span class="num">2</span> Add two HTTP(s) monitors in Uptime Kuma</h3>
@@ -176,6 +231,34 @@ X-File-Name: export.zip</pre>
   padding: 10px;
   border-radius: var(--radius-sm);
   background: var(--surface);
+}
+.qrline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.qrtext {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.start {
+  align-self: flex-start;
+}
+/* A computer (mouse) shows codes to scan with the iPhone; a touch device is the phone itself and gets buttons. */
+@media (hover: hover) and (pointer: fine) {
+  .on-phone {
+    display: none;
+  }
+}
+@media (hover: none), (pointer: coarse) {
+  .on-computer {
+    display: none;
+  }
+}
+details.step summary {
+  cursor: pointer;
 }
 pre {
   margin: 0;

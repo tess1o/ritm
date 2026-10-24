@@ -62,7 +62,16 @@ func TestLoadValidatesPairsAndValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.StaleAfter != 240*time.Hour || c.BaseURL != "https://ritm.example" || !c.SecureCookies() || c.TrustedProxies != nil {
+	if c.StaleAfter != 240*time.Hour || c.BaseURL != "https://ritm.example" || !c.SecureCookies() || c.TrustedProxies != nil ||
+		c.ShortcutURL != DefaultShortcutURL {
 		t.Fatalf("config %+v", c)
+	}
+	t.Setenv("RITM_SHORTCUT_URL", "http://example.com/shortcut")
+	if _, err := Load(); err == nil {
+		t.Fatal("want an error for a non-https shortcut URL")
+	}
+	t.Setenv("RITM_SHORTCUT_URL", "https://www.icloud.com/shortcuts/abc")
+	if c, err := Load(); err != nil || c.ShortcutURL != "https://www.icloud.com/shortcuts/abc" {
+		t.Fatalf("shortcut URL: %v %v", c, err)
 	}
 }

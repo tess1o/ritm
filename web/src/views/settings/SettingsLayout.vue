@@ -51,7 +51,6 @@ onMounted(() => nav.value?.querySelector('.active')?.scrollIntoView({ block: 'ne
 <style scoped>
 .settings {
   gap: 12px;
-  max-width: 1120px;
   margin-left: 0;
 }
 .snav {

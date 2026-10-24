@@ -1544,6 +1544,8 @@ export interface components {
              * @description RITM_MAX_UPLOAD_MB
              */
             max_upload_mb: number;
+            /** @description RITM_SHORTCUT_URL: iCloud link of the Send to Ritm iPhone shortcut */
+            shortcut_url: string;
             /**
              * Format: double
              * @description RITM_STALE_AFTER

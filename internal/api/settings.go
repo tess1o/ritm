@@ -18,6 +18,7 @@ type ServerSettings struct {
 	Timezone         string  `json:"timezone" doc:"RITM_TZ, used while the user has no time zone set"`
 	BaseURL          string  `json:"base_url" doc:"RITM_BASE_URL, empty when unset"`
 	MaxUploadMB      int64   `json:"max_upload_mb" doc:"RITM_MAX_UPLOAD_MB"`
+	ShortcutURL      string  `json:"shortcut_url" doc:"RITM_SHORTCUT_URL: iCloud link of the Send to Ritm iPhone shortcut"`
 }
 
 // SettingsResponse is the user's settings, their resolved values and the server's settings.
@@ -42,6 +43,7 @@ func (s *Server) settingsOf(ctx context.Context, t *tenant.Tenant) (*body[Settin
 		Timezone:         s.Cfg.TZ.String(),
 		BaseURL:          s.Cfg.BaseURL,
 		MaxUploadMB:      s.Cfg.MaxUploadBytes >> 20,
+		ShortcutURL:      s.Cfg.ShortcutURL,
 	}}), nil
 }
 

@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 	"net/netip"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// DefaultShortcutURL is the iCloud link of the shared "Send to Ritm" iPhone shortcut.
+const DefaultShortcutURL = "https://www.icloud.com/shortcuts/efcd38d390754327925c710a4c2c58e6"
 
 type Config struct {
 	InitUser             string // created on startup if it does not exist yet
@@ -26,6 +30,7 @@ type Config struct {
 	DeltaWindow          time.Duration
 	LogLevel             slog.Level
 	StaleAfter           time.Duration
+	ShortcutURL          string // where the UI sends iPhones to install the "Send to Ritm" shortcut
 	// TrustedProxies are the peers whose X-Forwarded-For is believed; nil = loopback only,
 	// empty = none.
 	TrustedProxies []netip.Prefix
@@ -39,6 +44,7 @@ func Load() (*Config, error) {
 		DataDir:      env("RITM_DATA_DIR", "/data"),
 		ListenAddr:   env("RITM_LISTEN_ADDR", ":8080"),
 		BaseURL:      strings.TrimRight(os.Getenv("RITM_BASE_URL"), "/"),
+		ShortcutURL:  strings.TrimSpace(env("RITM_SHORTCUT_URL", DefaultShortcutURL)),
 	}
 	var errs []error
 	if (c.InitUser == "") != (c.InitPassword == "") {
@@ -49,6 +55,10 @@ func Load() (*Config, error) {
 		errs = append(errs, errors.New("RITM_REGISTRATION_ENABLED: invalid boolean"))
 	}
 	c.RegistrationEnabled = reg
+
+	if u, err := url.Parse(c.ShortcutURL); err != nil || u.Scheme != "https" || u.Host == "" {
+		errs = append(errs, errors.New("RITM_SHORTCUT_URL: must be an https:// URL"))
+	}
 
 	tz, err := time.LoadLocation(env("RITM_TZ", "UTC"))
 	if err != nil {

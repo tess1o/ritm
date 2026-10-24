@@ -106,6 +106,7 @@ All settings are environment variables.
 | `RITM_STALE_AFTER`                      | `336h`             | Default no-new-data threshold for monitoring. Each user can override it in Settings.                                                                |
 | `RITM_LOG_LEVEL`                        | `info`             | `debug`, `info`, `warn` or `error`. Logs are JSON on stderr.                                                                                        |
 | `RITM_TRUSTED_PROXIES`                  | loopback           | Peers whose `X-Forwarded-For` is believed: comma-separated IPs/CIDRs (e.g. `172.18.0.0/16`), or `none`.                                             |
+| `RITM_SHORTCUT_URL`                     | the shared link    | iCloud link of the *Send to Ritm* iPhone shortcut offered under Settings → Connections. Set it to share your own build; must be `https://`.         |
 
 Durations accept Go syntax (`72h`) plus a `d` unit (`14d`).
 
@@ -195,15 +196,93 @@ fails when either is stale.
 
 ### Upload from an iPhone Shortcut
 
-Create a key with scope `ingest`. Then make a Shortcut that appears in the share sheet for
-**Files**, with one action, **Get Contents of URL**:
+The **Send to Ritm** shortcut uploads `export.zip` from the Health share sheet. Setting it up needs
+no typing:
 
-- URL `https://ritm.example/api/v1/imports`, method **POST**
-- headers `Authorization: Bearer ritm_…` and `X-File-Name: export.zip`
-- request body **File** = Shortcut Input
+1. Settings → Connections → *iPhone Shortcut*.
+2. **Install the shortcut**: scan the first code with the iPhone (on the iPhone itself: *Get the
+   shortcut*) → *Add Shortcut*.
+3. **Connect it**: *Create key and connect* makes a key with scope `ingest` and shows a second code
+   (on the iPhone: a *Connect shortcut* button). It is a
+   `shortcuts://run-shortcut?name=Send%20to%20Ritm&input=text&text=…` link carrying
+   `{"ritm":1,"url":"<server>/api/v1/imports","key":"ritm_…"}`. The shortcut checks it against the
+   server, saves it as iCloud Drive → Shortcuts → `Ritm.json`, and shows *Connected to Ritm*. To
+   switch servers or keys, generate a new key and scan again.
+4. On the first run, allow the connection to your server and access to the folder (*Always Allow*).
+   If large uploads are refused, turn on iOS Settings → Shortcuts → Advanced → *Allow Sharing Large
+   Amounts of Data*.
 
-After *Export All Health Data*, share `export.zip` to the Shortcut. The response is the new import
-(`202`), and progress shows on the Import page. The same call works with curl:
+Then, for each export: Health → profile picture → **Export All Health Data** → share sheet →
+**Send to Ritm**. Stay in Shortcuts until the *import started* notification; progress shows on the
+Import page. The shortcut keeps the last export as Shortcuts → `Ritm-export.zip`. Run it from the
+Shortcuts app (no input) to resend it, or save exports under that name and let a nightly Personal
+Automation send them. Sending the same export twice is harmless: Ritm stores only new data.
+
+A self-hosted server cannot make a shortcut with its address and key built in: iOS only imports
+signed shortcut files, and signing needs a Mac signed into iCloud. So one generic shortcut is shared
+by iCloud link ([Send to Ritm](https://www.icloud.com/shortcuts/efcd38d390754327925c710a4c2c58e6),
+`RITM_SHORTCUT_URL` to use another), and the connect link configures it.
+
+#### Building the shortcut
+
+For maintainers, or to build it yourself. Name it exactly **Send to Ritm** (the connect link runs it
+by name). In its details, turn on *Show in Share Sheet*, receive **Files** and **Text**, and set
+*If there's no input* to *Continue*.
+
+Its files live directly in iCloud Drive → Shortcuts. **Save File** does not create folders, so give it
+a full file name as the subpath, with *Ask Where to Save* off and *Overwrite If File Exists* on:
+`Ritm.json` (connection) and `Ritm-export.zip` (last export). **Get File from Folder** reads them
+from the Shortcuts folder with *Error If Not Found* off. When an **If** on a variable offers file
+properties (*File Size*), tap the variable and set its type (Number or Text) first.
+
+Actions:
+
+1. **Get Type** of *Shortcut Input*. **If** *Type* is `Text` (configure):
+   - **Get Dictionary from Input** (*Shortcut Input*).
+   - **Get Dictionary Value** `url` → **Set Variable** `RitmURL`; **Get Dictionary Value** `key` →
+     **Set Variable** `RitmKey`.
+   - **Text** `RitmURL` + `/00000000-0000-0000-0000-000000000000` (no space between them) → **Get
+     Contents of URL** *Text*, method GET, header `Authorization` = `Bearer ` + `RitmKey`.
+   - **Get Dictionary Value** `status` in *Contents of URL*. Ritm answers an unknown import id with
+     a problem JSON, so `404` means the server and key are fine.
+   - **If** *Dictionary Value* is `404` — tap the variable and set its type to **Number** first, or
+     Shortcuts treats it as a file and offers *File Size*:
+     - **Set Name** of *Shortcut Input* to `config.json` → **Save File** *Renamed Item* to
+       `Ritm.json` → **Show Notification** "Connected to Ritm".
+     - **Otherwise** → **Show Notification** "Ritm connection failed (status: *Dictionary Value*)":
+       `401` is a revoked or wrong key, empty means the server was not reached.
+
+   Saving only after the check means a bad link never overwrites a working connection.
+2. Otherwise (upload):
+   - **Get File from Folder** `Ritm.json`. **If** *File* does not have any value → notify "Not
+     connected. Open Ritm → Settings → Connections → iPhone Shortcut." → **Stop This Shortcut**.
+   - **Get Dictionary from Input** *File* → **Get Dictionary Value** `url` → **Set Variable**
+     `RitmURL`; `key` → `RitmKey`.
+3. **Continue Shortcut in App**, where iOS offers it (it is missing on iOS 26). Share-sheet shortcuts
+   get less memory; if a large export fails from the share sheet, save it as `Ritm-export.zip` and
+   run the shortcut from the Shortcuts app instead.
+4. **If** *Shortcut Input* has any value:
+   - **Set Name** of *Shortcut Input* to `export.zip` → **Save File** *Renamed Item* to
+     `Ritm-export.zip` → **Set Variable** `Export` to *Saved File*.
+   - **Otherwise** → **Get File from Folder** `Ritm-export.zip`. If it has no value, notify
+     "Nothing to send. Share an export from Health." and stop. **Set Variable** `Export` to *File*.
+5. **Get Contents of URL** *RitmURL*, method POST. Headers: `Authorization` = `Bearer ` +
+   *RitmKey*, `X-File-Name` = `export.zip`. Request body **File** = *Export*.
+6. **Get Dictionary Value** `detail` in *Contents of URL*. **If** it has any value, the upload was
+   refused (problem JSON, e.g. 401, 409 or 413): notify "Ritm: *detail*". **Otherwise** → **Get
+   Dictionary Value** `status` → notify "Ritm: import *status*".
+7. Optional: **Repeat** 90 times: **Wait** 10 s → GET `<url>/<id>` → once `status` is
+   `succeeded`, notify "Ritm: N new workouts" from `stats.new_workouts` and stop. On `failed`,
+   notify `error` and stop.
+
+Share it (Share → Copy iCloud Link) and set the link as `RITM_SHORTCUT_URL`. A changed shortcut needs
+a new link; the `Ritm.json` format stays the same across shortcut versions.
+
+Behind a reverse proxy, allow large request bodies and slow uploads. nginx defaults to
+`client_max_body_size 1m`. Cloudflare's free plan caps request bodies at 100 MB, so send exports
+over a LAN or Tailscale address instead.
+
+The same upload works with curl:
 
 ```sh
 curl -H "Authorization: Bearer ritm_…" -H "X-File-Name: export.zip" \

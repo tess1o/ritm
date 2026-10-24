@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import Icon from '../components/Icon.vue'
 import { useAuth } from '../composables/useAuth'
+import { useIphoneShortcut } from '../composables/useKeys'
 import { useSleepAvailable } from '../composables/useSleepAvailable'
 
 const { hasSleep } = useSleepAvailable()
 const { logout, version } = useAuth()
+const iphone = useIphoneShortcut()
+iphone.load()
 </script>
 
 <template>
@@ -13,6 +16,8 @@ const { logout, version } = useAuth()
       <RouterLink to="/day"><Icon name="calendar" /> Day view <Icon name="right" class="chev" /></RouterLink>
       <RouterLink v-if="hasSleep" to="/sleep"><Icon name="moon" /> Sleep & recovery <Icon name="right" class="chev" /></RouterLink>
       <RouterLink to="/insights"><Icon name="bulb" /> Insights <Icon name="right" class="chev" /></RouterLink>
+      <RouterLink v-if="iphone.known.value && !iphone.connected.value" to="/import?connect=iphone">
+        <Icon name="phone" /> Connect iPhone <Icon name="right" class="chev" /></RouterLink>
       <RouterLink to="/import"><Icon name="upload" /> Import <Icon name="right" class="chev" /></RouterLink>
       <RouterLink to="/assistant"><Icon name="bot" /> AI assistants <Icon name="right" class="chev" /></RouterLink>
       <RouterLink to="/settings"><Icon name="settings" /> Settings <Icon name="right" class="chev" /></RouterLink>
