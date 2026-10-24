@@ -50,7 +50,7 @@ async function submit() {
         <span class="logo"><Icon name="activity" :size="22" /></span>
         <div>
           <h1>Ritm</h1>
-          <p class="muted small">{{ mode === 'register' ? 'Create your account' : 'Your Apple Watch history' }}</p>
+          <p class="muted small">{{ mode === 'register' ? 'Create your account' : '' }}</p>
         </div>
       </div>
       <label class="field">
