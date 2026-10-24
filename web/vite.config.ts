@@ -8,6 +8,7 @@ const api = process.env.RITM_API ?? 'http://127.0.0.1:8080'
 
 // swVersion stamps dist/sw.js with a hash of the bundle and the cached static files, so every
 // deploy that changes them ships a new service worker, and its cache name changes with it.
+// It also puts back dist/.gitkeep, which emptyOutDir removes: go:embed needs a file in a fresh checkout.
 function swVersion(): Plugin {
   let outDir = 'dist'
   let names: string[] = []
@@ -21,6 +22,7 @@ function swVersion(): Plugin {
       names = Object.keys(bundle).sort()
     },
     closeBundle() {
+      writeFileSync(join(outDir, '.gitkeep'), '')
       const sw = join(outDir, 'sw.js')
       const h = createHash('sha256').update(names.join('\n'))
       for (const f of ['offline.html', 'manifest.webmanifest']) h.update(readFileSync(join(outDir, f)))
