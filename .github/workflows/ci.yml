@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Check image size (≤ 30 MB)
         run: |
           docker buildx build --platform linux/amd64 --load -t ritm:ci .
