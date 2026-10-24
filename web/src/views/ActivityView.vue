@@ -272,8 +272,8 @@ const pairs = computed(() => {
   return [
     build('Workdays vs weekend', group('Workdays', w.filter((d) => !isWeekend(d.day))), group('Weekend', w.filter((d) => isWeekend(d.day))),
       'on workdays', 'at weekends'),
-    build('Gym days vs other days', group('Gym days', w.filter((d) => d.is_gym_day)), group('Other days', w.filter((d) => !d.is_gym_day)),
-      'on gym days', 'on non-gym days'),
+    build('Training days vs other days', group('Training days', w.filter((d) => d.is_gym_day)), group('Other days', w.filter((d) => !d.is_gym_day)),
+      'on training days', 'on other days'),
   ]
 })
 

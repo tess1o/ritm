@@ -108,8 +108,9 @@ func (e *Engine) computeActivity(ctx context.Context, tx *sql.Tx, r days.Range, 
 	rows.Close()
 
 	gym := map[days.Day]bool{}
-	rows, err = tx.QueryContext(ctx, "SELECT start_ms, tz_offset_min FROM workouts WHERE activity_type = ? AND start_ms >= ? AND start_ms < ?",
-		res.MainType, fromMS, toMS)
+	types := res.SessionTypesEffective
+	rows, err = tx.QueryContext(ctx, "SELECT start_ms, tz_offset_min FROM workouts WHERE activity_type IN ("+store.Placeholders(len(types))+
+		") AND start_ms >= ? AND start_ms < ?", append(store.Anys(types), fromMS, toMS)...)
 	if err != nil {
 		return err
 	}

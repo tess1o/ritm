@@ -42,7 +42,7 @@ func Load() (*Config, error) {
 		InitUser:     strings.TrimSpace(os.Getenv("RITM_INIT_USER")),
 		InitPassword: os.Getenv("RITM_INIT_PASSWORD"),
 		DataDir:      env("RITM_DATA_DIR", "/data"),
-		ListenAddr:   env("RITM_LISTEN_ADDR", ":8080"),
+		ListenAddr:   env("RITM_LISTEN_ADDR", ":7486"),
 		BaseURL:      strings.TrimRight(os.Getenv("RITM_BASE_URL"), "/"),
 		ShortcutURL:  strings.TrimSpace(env("RITM_SHORTCUT_URL", DefaultShortcutURL)),
 	}

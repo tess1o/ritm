@@ -40,7 +40,7 @@ The image is `ghcr.io/tess1o/ritm` (linux/amd64 and linux/arm64), tagged `latest
    docker compose up -d
    ```
 
-Then open `http://<host>:8080`, sign in and upload `export.zip`. To update later, run
+Then open `http://<host>:7486`, sign in and upload `export.zip`. To update later, run
 `docker compose pull && docker compose up -d`. To get the file on the iPhone, go to Health →
 profile picture → *Export All Health Data* and save it to Files. iOS Safari can upload it from Files.
 
@@ -50,7 +50,7 @@ Exports are 0.5–3 GB, so the proxy must allow large and slow uploads. With ngi
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:7486;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     client_max_body_size 4g;
@@ -67,7 +67,7 @@ use the address the page was opened at), and an allowed `Origin` for writes when
 Leave it unset while you reach Ritm over plain `http://`: with an `https://` value the browser drops the cookie and
 sign-in fails.
 
-With the proxy on the same host, publish the port on loopback only (`ports: [ "127.0.0.1:8080:8080" ]`), so
+With the proxy on the same host, publish the port on loopback only (`ports: [ "127.0.0.1:7486:7486" ]`), so
 Ritm can't be reached around the proxy. Docker's published ports bypass host firewalls such as ufw.
 
 The login and API-key rate limits use the client IP. By default Ritm believes `X-Forwarded-For` only from
@@ -90,7 +90,7 @@ All settings are environment variables.
 | `RITM_REGISTRATION_ENABLED`             | `false`            | Allow visitors to create accounts on the login page.                                                                                                |
 | `RITM_MAX_CONCURRENT_IMPORTS`           | `1`                | Server-wide cap on imports running at once, to bound CPU, RAM and disk I/O. Each user can run at most one; uploads beyond the cap wait as "queued". |
 | `RITM_DATA_DIR`                         | `/data`            | Holds `app.db`, `users/<uuid>.db` and temporary uploads.                                                                                            |
-| `RITM_LISTEN_ADDR`                      | `:8080`            | Listen address.                                                                                                                                     |
+| `RITM_LISTEN_ADDR`                      | `:7486`            | Listen address.                                                                                                                                     |
 | `RITM_BASE_URL`                         | —                  | Public URL. `https://` makes the session cookie `Secure`; also used in copy-ready snippets. See [Reverse proxy](#reverse-proxy).                    |
 | `RITM_TZ`                               | `UTC`              | Time zone for users who have none yet. Each user's zone is taken from the browser at the first sign-in and can be changed in Settings.             |
 | `RITM_MAX_UPLOAD_MB`                    | `4096`             | Upload limit.                                                                                                                                       |
@@ -492,7 +492,7 @@ builds both architectures and pushes them to GHCR on `v*` tags.
 ## Development
 
 ```sh
-make dev        # Go API on :8080 + Vite on :5173 (creates .env from .env.example)
+make dev        # Go API on :7486 + Vite on :5173 (creates .env from .env.example)
 make seed       # import 180 days of synthetic data for the .env user
 make test       # Go tests
 make test-web   # type check, lint, build, bundle size

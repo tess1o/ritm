@@ -28,9 +28,9 @@ RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/ritm /ritm
 COPY --from=build --chown=65532:65532 /out/data /data
-ENV RITM_DATA_DIR=/data RITM_LISTEN_ADDR=:8080
+ENV RITM_DATA_DIR=/data RITM_LISTEN_ADDR=:7486
 VOLUME /data
-EXPOSE 8080
+EXPOSE 7486
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD ["/ritm", "healthcheck"]
 ENTRYPOINT ["/ritm"]
 CMD ["serve"]

@@ -4,7 +4,7 @@ services:
     image: ghcr.io/tess1o/ritm:latest   # or pin a release, e.g. ghcr.io/tess1o/ritm:0.1.0
     container_name: ritm                # the README's CLI examples use `docker exec ritm`
     restart: unless-stopped
-    ports: [ "8080:8080" ]              # "127.0.0.1:8080:8080" behind a reverse proxy on this host
+    ports: [ "7486:7486" ]              # "127.0.0.1:7486:7486" behind a reverse proxy on this host
     environment:
       RITM_INIT_USER: admin
       RITM_INIT_PASSWORD: change-me     # pick a long password before the first start

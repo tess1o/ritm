@@ -40,6 +40,7 @@ type Overview struct {
 	HRVMs          Stat               `json:"hrv_sdnn_ms"`
 	AsleepMin      Stat               `json:"asleep_min_per_night"`
 	Sessions       int                `json:"sessions"`
+	SessionsLabel  string             `json:"sessions_label" doc:"Which workout types count as sessions, e.g. \"Functional Strength Training\" or \"A + B\""`
 	SessionsTarget float64            `json:"sessions_target"`
 	Goals          map[string]float64 `json:"goals"`
 	Insights       []insights.Insight `json:"insights"`
@@ -136,11 +137,12 @@ func (s *Service) Overview(ctx context.Context, r days.Range, staleAfter time.Du
 		}
 	}
 
-	ws, _, err := s.Workouts(ctx, WorkoutFilter{Range: r, ActivityType: res.MainType}, 1000)
+	ws, _, err := s.Workouts(ctx, WorkoutFilter{Range: r, ActivityTypes: res.SessionTypesEffective}, 1000)
 	if err != nil {
 		return nil, err
 	}
 	o.Sessions = len(ws)
+	o.SessionsLabel = res.SessionsLabel
 	o.SessionsTarget = math.Round(float64(res.Goals.SessionsPerWeek)*float64(r.Len())/7*10) / 10
 	o.Goals = map[string]float64{"steps_per_day": res.Goals.StepsPerDay, "sessions_per_week": float64(res.Goals.SessionsPerWeek),
 		"stand_hours": res.Goals.StandHours, "exercise_min": res.Goals.ExerciseMin}
@@ -150,7 +152,7 @@ func (s *Service) Overview(ctx context.Context, r days.Range, staleAfter time.Du
 	}
 	// Scores look at most 97 days back (7-day window + 90-day baseline) from the period's end.
 	end := min(r.To, s.Today())
-	data, err := insights.Load(ctx, s.db.RO, res.MainType, end.Add(-100), end)
+	data, err := insights.Load(ctx, s.db.RO, res.SessionTypesEffective, end.Add(-100), end)
 	if err != nil {
 		return nil, err
 	}

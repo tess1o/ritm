@@ -148,8 +148,8 @@ important change and one thing to keep doing. Keep it factual; this is not medic
 			return prompt("Training review", fmt.Sprintf(`Review my training over the last %d weeks from my Ritm data.
 1. Call get_training_load with period=%q for load, fitness (CTL), fatigue (ATL), form (TSB), ACWR and
    weekly consistency against my target.
-2. Call list_workouts with period=%q, and get_workout for the two most recent sessions of my main
-   workout type to look at HR zones and recovery.
+2. Call list_workouts with period=%q, and get_workout for the two most recent sessions (workout types
+   counted as sessions, see get_settings) to look at HR zones and recovery.
 3. Call get_insights with category=training, and compare_periods (a = the last 4 weeks, b = the 4 weeks
    before) to see the trend.
 Report sessions per week versus the target and the current streak, how intensity (time in zone 3+,

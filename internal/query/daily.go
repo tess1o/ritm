@@ -211,7 +211,7 @@ func (s *Service) Recovery(ctx context.Context, r days.Range) (*Recovery, error)
 	if err != nil {
 		return nil, err
 	}
-	data, err := insights.Load(ctx, s.db.RO, res.MainType, r.From.Add(-1), r.To)
+	data, err := insights.Load(ctx, s.db.RO, res.SessionTypesEffective, r.From.Add(-1), r.To)
 	if err != nil {
 		return nil, err
 	}

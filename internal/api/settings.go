@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -68,7 +69,13 @@ func (s *Server) registerSettings() {
 				return nil, err
 			}
 			st := in.Body
-			st.MainWorkoutType = strings.TrimSpace(st.MainWorkoutType)
+			types := []string{}
+			for _, t := range st.SessionTypes {
+				if t = strings.TrimSpace(t); t != "" && !slices.Contains(types, t) {
+					types = append(types, t)
+				}
+			}
+			st.SessionTypes = types
 			if err := st.Validate(); err != nil {
 				return nil, huma.Error400BadRequest(err.Error())
 			}

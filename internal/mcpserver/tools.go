@@ -316,7 +316,7 @@ func (t *tools) register(s *mcp.Server) {
 		})
 
 	addTool(s, t, "compare_periods", "Compare periods",
-		"Side-by-side per-day averages of activity, heart and sleep plus training totals for two periods, with delta = a - b and delta_pct relative to b. Training sessions count the main workout type (see get_settings); all_workouts counts every workout.",
+		"Side-by-side per-day averages of activity, heart and sleep plus training totals for two periods, with delta = a - b and delta_pct relative to b. Training sessions count the session workout types (session_types_effective in get_settings); all_workouts counts every workout.",
 		func(ctx context.Context, in struct {
 			A string `json:"a" jsonschema:"First period, e.g. last_month or 2026-09-01..2026-09-30."`
 			B string `json:"b" jsonschema:"Second period to compare against."`
@@ -349,7 +349,7 @@ func (t *tools) register(s *mcp.Server) {
 		})
 
 	addTool(s, t, "get_settings", "Settings",
-		"Goals, heart-rate zones in bpm (model, max and resting HR), training-load model, main workout type, waking hours and data-source priority.",
+		"Goals, heart-rate zones in bpm (model, max and resting HR), training-load model, workout types counted as sessions, waking hours and data-source priority.",
 		func(ctx context.Context, _ struct{}) (any, error) {
 			return t.t.Query.Resolved(ctx)
 		})
@@ -459,7 +459,7 @@ func (t *tools) summary(ctx context.Context, rg days.Range) (map[string]row, err
 	delete(out["activity"], "has_watch_data_days")
 	delete(out["activity"], "summary_mismatch_days")
 
-	// Sessions are main-type workouts, as in get_overview and get_training_load; walks and
+	// Sessions are workouts of the session types, as in get_overview and get_training_load; walks and
 	// other workouts only count in all_workouts.
 	res, err := t.t.Query.Resolved(ctx)
 	if err != nil {
@@ -471,7 +471,7 @@ func (t *tools) summary(ctx context.Context, rg days.Range) (map[string]row, err
 	}
 	var ws []query.WorkoutSummary
 	for _, w := range all {
-		if w.ActivityType == res.MainType {
+		if res.IsSessionType(w.ActivityType) {
 			ws = append(ws, w)
 		}
 	}

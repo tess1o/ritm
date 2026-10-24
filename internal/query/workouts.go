@@ -69,6 +69,7 @@ type WorkoutFilter struct {
 	Range          days.Range
 	StartMS, EndMS int64 // exact window: workouts overlapping [StartMS, EndMS)
 	ActivityType   string
+	ActivityTypes  []string // any of these types
 	Category       string
 	Near           *Near        // route starts within RadiusM of a point
 	BBox           *RouteBounds // route bounds intersect this box (MinLon > MaxLon crosses the antimeridian)
@@ -139,13 +140,16 @@ func (s *Service) Workouts(ctx context.Context, f WorkoutFilter, limit int) ([]W
 	if f.ActivityType != "" {
 		cond("activity_type = ?", f.ActivityType)
 	}
+	if len(f.ActivityTypes) > 0 {
+		cond("activity_type IN ("+store.Placeholders(len(f.ActivityTypes))+")", store.Anys(f.ActivityTypes)...)
+	}
 	if f.Category != "" {
 		types := ingest.CategoryTypes(f.Category)
 		in := "activity_type IN (" + store.Placeholders(len(types)) + ")"
 		if f.Category == ingest.CategoryOther {
 			in = "activity_type NOT IN (" + store.Placeholders(len(types)) + ")"
 		}
-		cond(in, anys(types)...)
+		cond(in, store.Anys(types)...)
 	}
 	if f.RouteOnly || f.Near != nil || f.BBox != nil {
 		cond("route_points IS NOT NULL")
@@ -243,14 +247,6 @@ func ParseCursor(s string) (Cursor, error) {
 		return c, errors.New("invalid cursor")
 	}
 	return c, nil
-}
-
-func anys(ss []string) []any {
-	out := make([]any, len(ss))
-	for i, s := range ss {
-		out[i] = s
-	}
-	return out
 }
 
 type WorkoutEvent struct {

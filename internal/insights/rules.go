@@ -275,8 +275,8 @@ func gymVsRest(c *Ctx, p Period) *Insight {
 	}
 	return &Insight{
 		Polarity: Neutral,
-		Title:    fmt.Sprintf("Non-gym days average %s steps", num(r, 0)),
-		Body:     fmt.Sprintf("Gym days average %s — consider short walks on the other days.", num(g, 0)),
+		Title:    fmt.Sprintf("Non-training days average %s steps", num(r, 0)),
+		Body:     fmt.Sprintf("Training days average %s — consider short walks on the other days.", num(g, 0)),
 		Metric:   "steps_non_gym_days", Current: fp(r), Baseline: fp(g), DeltaPct: fp(pctDelta(r, g)),
 		Evidence: map[string]any{"gym_days": len(gym), "non_gym_days": len(rest), "goal_steps": goal},
 	}
@@ -553,7 +553,7 @@ func sessionHR(c *Ctx, p Period) *Insight {
 	}
 	return &Insight{
 		Polarity: pick(cur < base, Positive, Neutral),
-		Title:    fmt.Sprintf("Gym session HR %s %s bpm", upDown(cur-base), num(math.Abs(cur-base), 0)),
+		Title:    fmt.Sprintf("Session HR %s %s bpm", upDown(cur-base), num(math.Abs(cur-base), 0)),
 		Body: fmt.Sprintf("%s → %s bpm over 8 weeks, comparing sessions of similar length (~%s min).",
 			num(base, 0), num(cur, 0), num(med/60, 0)),
 		Metric: "session_avg_hr", Current: fp(cur), Baseline: fp(base), DeltaPct: fp(pctDelta(cur, base)),

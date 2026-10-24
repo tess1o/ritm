@@ -1,4 +1,4 @@
-# Ritm — developer tasks. `make dev` runs the Go API (:8080) and the Vite dev server (:5173).
+# Ritm — developer tasks. `make dev` runs the Go API (:7486) and the Vite dev server (:5173).
 SHELL := /bin/bash
 GO    ?= go
 NPM   ?= npm
@@ -28,10 +28,10 @@ dev: env web/node_modules ## Run Go API + Vite dev server (open http://localhost
 	  ( cd web && $(NPM) run dev ) & \
 	  wait
 
-dev-api: env ## Run only the Go API on :8080
+dev-api: env ## Run only the Go API on :7486
 	@set -a; source ./.env; set +a; $(GO) run ./cmd/ritm serve
 
-dev-web: web/node_modules ## Run only the Vite dev server on :5173 (proxies /api to :8080)
+dev-web: web/node_modules ## Run only the Vite dev server on :5173 (proxies /api to :7486)
 	cd web && $(NPM) run dev
 
 build: build-web build-go ## Build the UI and a binary that embeds it (bin/ritm)

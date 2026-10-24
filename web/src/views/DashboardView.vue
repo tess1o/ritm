@@ -67,8 +67,8 @@ const kpis = computed(() => {
       series: weekly(heartRows, (d) => d.resting_hr_bpm), seriesLabel: 'weekly average, last 12 weeks', color: color('--c-hr'),
     },
     {
-      label: 'Gym sessions', to: '/training', value: `${o.sessions}`, unit: `of ${num(o.sessions_target)}`,
-      footnote: o.sessions >= o.sessions_target ? 'target met' : `${num(o.sessions_target - o.sessions)} to go`,
+      label: 'Sessions', to: '/training', value: `${o.sessions}`, unit: `of ${num(o.sessions_target)}`,
+      footnote: `${o.sessions >= o.sessions_target ? 'target met' : `${num(o.sessions_target - o.sessions)} to go`} · ${o.sessions_label}`,
       detail: load.data.value?.latest?.ctl != null ? `fitness ${num(load.data.value.latest.ctl)}` : undefined,
       series: weekly(load.data.value?.days, (d) => d.sessions, true), seriesLabel: 'sessions per week, last 12 weeks', color: color('--c-exercise'),
     },

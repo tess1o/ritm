@@ -35,7 +35,7 @@ type Workout struct {
 // Data is everything the rules need, loaded once per evaluation.
 type Data struct {
 	Days     map[days.Day]*Day
-	Workouts []Workout // main type, ordered by day
+	Workouts []Workout // sessions (Resolved.SessionTypesEffective), ordered by day
 	First    days.Day
 	Anchor   days.Day // last day with Watch data
 	Today    days.Day
@@ -49,7 +49,7 @@ func f(v sql.NullFloat64) float64 {
 }
 
 // Load reads v_daily and main-type workouts from day from (negative = all history) to today.
-func Load(ctx context.Context, q store.Querier, mainType string, from, today days.Day) (*Data, error) {
+func Load(ctx context.Context, q store.Querier, sessionTypes []string, from, today days.Day) (*Data, error) {
 	rows, err := q.QueryContext(ctx, `SELECT d.day, d.steps, d.distance_m, d.active_kcal, d.stand_hours, d.exercise_min, d.longest_sedentary_h,
 		d.ring_move_kcal, d.ring_move_goal, d.ring_exercise_goal, d.ring_stand_goal, ifnull(a.has_watch_data, 0), ifnull(d.is_gym_day, 0),
 		d.resting_hr_bpm, d.walking_hr_bpm, d.hrv_sdnn_ms, d.vo2max_ml_kg_min, ifnull(d.heart_events, 0), ifnull(h.hr_samples, 0),
@@ -94,7 +94,8 @@ func Load(ctx context.Context, q store.Querier, mainType string, from, today day
 	}
 
 	wr, err := q.QueryContext(ctx, `SELECT local_day, ifnull(duration_s, 0), ifnull(avg_hr_bpm, 0), ifnull(pct_z3_plus, -1)
-		FROM v_workouts WHERE activity_type = ? AND start_ms >= ? ORDER BY start_ms`, mainType, (max(from, 0) - 1).StartMS(time.UTC))
+		FROM v_workouts WHERE activity_type IN (`+store.Placeholders(len(sessionTypes))+`) AND start_ms >= ? ORDER BY start_ms`,
+		append(store.Anys(sessionTypes), (max(from, 0)-1).StartMS(time.UTC))...)
 	if err != nil {
 		return nil, err
 	}

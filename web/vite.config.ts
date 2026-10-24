@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-const api = process.env.RITM_API ?? 'http://127.0.0.1:8080'
+const api = process.env.RITM_API ?? 'http://127.0.0.1:7486'
 
 // swVersion stamps dist/sw.js with a hash of the bundle and the cached static files, so every
 // deploy that changes them ships a new service worker, and its cache name changes with it.

@@ -12,7 +12,7 @@ import (
 var anchor = days.MustParse("2026-10-18") // a Sunday
 
 func res() *derive.Resolved {
-	return &derive.Resolved{Settings: derive.DefaultSettings(), MainType: "FST"}
+	return &derive.Resolved{Settings: derive.DefaultSettings(), SessionTypesEffective: []string{"FST"}}
 }
 
 // mkData builds n days ending at anchor with defaults overridden by fill.

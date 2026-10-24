@@ -221,6 +221,15 @@ func Placeholders(n int) string {
 	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
 }
 
+// Anys converts strings to query arguments, e.g. for a Placeholders list.
+func Anys(ss []string) []any {
+	out := make([]any, len(ss))
+	for i, s := range ss {
+		out[i] = s
+	}
+	return out
+}
+
 // BumpDataVersion marks a change to a user's data (data_freshness.data_version), so cached API
 // responses for it are revalidated. Call it in the transaction that makes the change.
 func BumpDataVersion(ctx context.Context, q Querier) error {

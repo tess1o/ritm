@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -18,9 +19,13 @@ import (
 // data version cannot vouch for them.
 var uncached = map[string]bool{"getFreshness": true, "getOverview": true, "getCoverage": true}
 
+// bootID changes on every start: builds from a branch share a version ("main", "dev"), and a
+// response cached by an older build may have another shape.
+var bootID = time.Now().UnixNano()
+
 // revalidate gives data reads an ETag, so clients can cache them and revalidate cheaply. The tag
 // covers the user's database and its data version (which every change bumps), today in the
-// user's time zone (relative periods move with it), the server version and the request URL, and
+// user's time zone (relative periods move with it), the server version and start, the request URL, and
 // is computed before the handler runs: a matching If-None-Match is answered 304 straight away.
 func (s *Server) revalidate(ctx huma.Context, next func(huma.Context)) {
 	op := ctx.Operation()
@@ -40,7 +45,7 @@ func (s *Server) revalidate(ctx huma.Context, next func(huma.Context)) {
 		return
 	}
 	r, _ := humago.Unwrap(ctx)
-	sum := sha256.Sum256(fmt.Appendf(nil, "%s|%d|%s|%s|%s", t.User.DBName, version, t.Query.Today(), s.Version, r.URL.RequestURI()))
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s|%d|%s|%s|%d|%s", t.User.DBName, version, t.Query.Today(), s.Version, bootID, r.URL.RequestURI()))
 	tag := `W/"` + hex.EncodeToString(sum[:12]) + `"`
 	ctx.SetHeader("ETag", tag)
 	ctx.SetHeader("Cache-Control", "private, no-cache")

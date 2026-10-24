@@ -54,12 +54,16 @@ function numOrNull(v: string) {
             <option value="banister">Banister TRIMP</option>
             <option value="srpe">sRPE (RPE × minutes; unrated sessions estimated from TRIMP)</option>
           </select></label>
-        <label class="field"><span>Main workout type</span>
-          <select v-model="form.main_workout_type" class="input">
-            <option value="">Auto — {{ res.main_workout_name }}</option>
-            <option v-for="t in types.data.value?.items" :key="t.activity_type" :value="t.activity_type">{{ t.name }} ({{ t.count }})</option>
-          </select></label>
       </div>
+      <fieldset class="types">
+        <legend>Counted as sessions
+          <span class="muted small">— for sessions per week, streaks and session HR. None ticked = the most frequent type of the last
+            90 days<template v-if="!res.session_types.length"> (now {{ res.sessions_label }})</template></span></legend>
+        <label v-for="t in types.data.value?.items" :key="t.activity_type" class="check">
+          <input v-model="form.session_types" type="checkbox" :value="t.activity_type" />
+          <span>{{ t.name }} <span class="muted small tnum">({{ t.count }})</span></span>
+        </label>
+      </fieldset>
     </Card>
 
     <SaveBar :dirty="dirty" :saving="saving" @discard="discard" />
@@ -81,6 +85,18 @@ function numOrNull(v: string) {
 .zone .input {
   min-height: 38px;
   padding: 4px 8px;
+}
+.types {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+.types legend {
+  margin-bottom: 4px;
+  padding: 0;
 }
 .zdot {
   width: 12px;

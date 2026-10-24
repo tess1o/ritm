@@ -80,7 +80,7 @@ const client = computed(() => clients.value.find((c) => c.id === tab.value)!)
 const examples = [
   'How was my last month compared with the month before?',
   'Is my resting heart rate improving? Show the trend for the last 6 months.',
-  'Am I keeping up 3 gym sessions a week? How is my training load?',
+  'Am I keeping up 3 training sessions a week? How is my training load?',
   'How do my workouts affect next-day resting HR and HRV?',
   'Which weekdays am I least active, and at what hours do I sit the longest?',
 ]

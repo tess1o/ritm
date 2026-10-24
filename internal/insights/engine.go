@@ -124,7 +124,7 @@ func NewEngine(db *store.DB, zone *days.Zone, clk clock.Clock) *Engine {
 // replacing previously generated insights for the same periods.
 func (e *Engine) Generate(ctx context.Context, _ days.Day, res *derive.Resolved) error {
 	today := e.zone.Today(e.clock.Now())
-	data, err := Load(ctx, e.db.W, res.MainType, -1, today)
+	data, err := Load(ctx, e.db.W, res.SessionTypesEffective, -1, today)
 	if err != nil {
 		return err
 	}

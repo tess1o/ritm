@@ -8,6 +8,7 @@ import (
 	"ritm/internal/days"
 	"ritm/internal/derive"
 	"ritm/internal/mathx"
+	"ritm/internal/store"
 )
 
 type LoadDay struct {
@@ -92,8 +93,9 @@ type TrainingTotals struct {
 
 type Weekly struct {
 	Target        int            `json:"target_sessions"`
-	MainType      string         `json:"main_workout_type"`
-	MainTypeName  string         `json:"main_workout_name"`
+	SessionTypes  []string       `json:"session_types"`
+	SessionNames  []string       `json:"session_type_names"`
+	SessionsLabel string         `json:"sessions_label"`
 	Weeks         []derive.Week  `json:"weeks"`
 	CurrentStreak int            `json:"current_streak_weeks"`
 	LongestStreak int            `json:"longest_streak_weeks"`
@@ -110,7 +112,7 @@ func (s *Service) TrainingWeekly(ctx context.Context, r days.Range) (*Weekly, er
 		return nil, err
 	}
 	target := res.Goals.SessionsPerWeek
-	weeks, err := derive.WeeklySessions(ctx, s.db.RO, r, target, res.MainType, s.Today())
+	weeks, err := derive.WeeklySessions(ctx, s.db.RO, r, target, res.SessionTypesEffective, s.Today())
 	if err != nil {
 		return nil, err
 	}
@@ -119,11 +121,11 @@ func (s *Service) TrainingWeekly(ctx context.Context, r days.Range) (*Weekly, er
 	if err := s.db.RO.QueryRowContext(ctx, "SELECT min(day) FROM daily_load").Scan(&first); err != nil {
 		return nil, err
 	}
-	out := &Weekly{Target: target, MainType: res.MainType, MainTypeName: res.MainTypeName, Weeks: weeks,
+	out := &Weekly{Target: target, SessionTypes: res.SessionTypesEffective, SessionNames: res.SessionTypeNames, SessionsLabel: res.SessionsLabel, Weeks: weeks,
 		Zones: []WeekZones{}, Sessions: []SessionHR{}, Monthly: []MonthVolume{}}
 	if first.Valid {
 		f, _ := days.Parse(first.String)
-		all, err := derive.WeeklySessions(ctx, s.db.RO, days.Range{From: f, To: s.Today()}, target, res.MainType, s.Today())
+		all, err := derive.WeeklySessions(ctx, s.db.RO, days.Range{From: f, To: s.Today()}, target, res.SessionTypesEffective, s.Today())
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +133,8 @@ func (s *Service) TrainingWeekly(ctx context.Context, r days.Range) (*Weekly, er
 	}
 
 	rows, err := s.db.RO.QueryContext(ctx, `SELECT id, local_day, avg_hr_bpm, duration_s, pct_z3_plus, zone_s_json FROM v_workouts
-		WHERE activity_type = ? AND local_day BETWEEN ? AND ? ORDER BY start_ms`, res.MainType, r.From.String(), r.To.String())
+		WHERE activity_type IN (`+store.Placeholders(len(res.SessionTypesEffective))+`) AND local_day BETWEEN ? AND ? ORDER BY start_ms`,
+		append(store.Anys(res.SessionTypesEffective), r.From.String(), r.To.String())...)
 	if err != nil {
 		return nil, err
 	}

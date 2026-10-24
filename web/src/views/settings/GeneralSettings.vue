@@ -22,7 +22,7 @@ const timeZones = computed(() => {
       <div class="form-grid">
         <label class="field"><span>Steps per day</span>
           <input v-model.number="form.goals.steps_per_day" class="input" type="number" min="1000" step="500" inputmode="numeric" /></label>
-        <label class="field"><span>Gym sessions per week</span>
+        <label class="field"><span>Sessions per week</span>
           <input v-model.number="form.goals.sessions_per_week" class="input" type="number" min="1" max="14" inputmode="numeric" /></label>
       </div>
       <label class="check">

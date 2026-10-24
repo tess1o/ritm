@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"ritm/internal/days"
@@ -33,8 +36,8 @@ type Settings struct {
 	ZoneBounds      [5]float64 `json:"zone_bounds"` // lower bound of zones 1–5 as fractions
 	LoadModel       string     `json:"load_model" enum:"edwards,banister,srpe"`
 	Goals           Goals      `json:"goals"`
-	MainWorkoutType string     `json:"main_workout_type"` // "" = most frequent type
-	SourcePriority  []string   `json:"source_priority"`   // empty = Watch → iPhone → other
+	SessionTypes    []string   `json:"session_types"`   // workout types counted as sessions; empty = most frequent type
+	SourcePriority  []string   `json:"source_priority"` // empty = Watch → iPhone → other
 	WakingStartHour int        `json:"waking_start_hour"`
 	WakingEndHour   int        `json:"waking_end_hour"`
 	StaleAfterHours *float64   `json:"stale_after_hours"` // nil = RITM_STALE_AFTER
@@ -63,6 +66,7 @@ func DefaultSettings() Settings {
 		Goals:           Goals{StepsPerDay: 8000, SessionsPerWeek: 3, StandHours: 12, ExerciseMin: 30},
 		WakingStartHour: 8,
 		WakingEndHour:   23,
+		SessionTypes:    []string{},
 		SourcePriority:  []string{},
 		ExtraTypes:      []string{},
 	}
@@ -91,6 +95,9 @@ func (s *Settings) Validate() error {
 	if s.Goals.StepsPerDay <= 0 || s.Goals.SessionsPerWeek <= 0 || s.Goals.SessionsPerWeek > 14 ||
 		s.Goals.StandHours <= 0 || s.Goals.StandHours > 24 || s.Goals.ExerciseMin <= 0 {
 		errs = append(errs, errors.New("goals must be positive (sessions per week ≤ 14, stand hours ≤ 24)"))
+	}
+	if len(s.SessionTypes) > 10 || slices.Contains(s.SessionTypes, "") {
+		errs = append(errs, errors.New("session_types must list at most 10 non-empty workout types"))
 	}
 	if s.WakingStartHour < 0 || s.WakingEndHour > 24 || s.WakingStartHour >= s.WakingEndHour {
 		errs = append(errs, errors.New("waking hours must satisfy 0 ≤ start < end ≤ 24"))
@@ -124,11 +131,21 @@ func (s Settings) Location(fallback *time.Location) *time.Location {
 }
 
 func LoadSettings(ctx context.Context, q store.Querier) (Settings, error) {
-	s := DefaultSettings()
-	if _, err := store.GetSetting(ctx, q, store.AppSettingsKey, &s); err != nil {
-		return s, err
+	stored := struct {
+		Settings
+		MainWorkoutType string `json:"main_workout_type"` // the single type saved before session_types
+	}{Settings: DefaultSettings()}
+	if _, err := store.GetSetting(ctx, q, store.AppSettingsKey, &stored); err != nil {
+		return stored.Settings, err
+	}
+	s := stored.Settings
+	if len(s.SessionTypes) == 0 && stored.MainWorkoutType != "" {
+		s.SessionTypes = []string{stored.MainWorkoutType}
 	}
 	// Lists are never null in the API, also for settings saved before that rule.
+	if s.SessionTypes == nil {
+		s.SessionTypes = []string{}
+	}
 	if s.SourcePriority == nil {
 		s.SourcePriority = []string{}
 	}
@@ -156,8 +173,11 @@ type Resolved struct {
 	RestingHRSource string     `json:"resting_hr_source" enum:"manual,30d_median,default"`
 	ZoneLowerBpm    [5]float64 `json:"zone_lower_bpm"`
 	Sources         []Source   `json:"sources"` // effective priority order
-	MainType        string     `json:"main_workout_type_effective"`
-	MainTypeName    string     `json:"main_workout_name"`
+	// SessionTypesEffective are the workout types counted as training sessions: SessionTypes, or
+	// the most frequent recent type when that is empty.
+	SessionTypesEffective []string `json:"session_types_effective"`
+	SessionTypeNames      []string `json:"session_type_names"`
+	SessionsLabel         string   `json:"sessions_label" doc:"What sessions count, for labels: the type's name, \"A + B\" or \"N workout types\""`
 	// GoalsSource tells where Goals.StandHours and Goals.ExerciseMin come from: "settings", or
 	// "rings" when UseRingGoals is on and the Watch's ring goals are known.
 	GoalsSource string `json:"goals_source" enum:"settings,rings"`
@@ -244,20 +264,26 @@ func Resolve(ctx context.Context, q store.Querier, s Settings, now time.Time) (*
 	}
 	r.Sources = srcs
 
-	r.MainType = s.MainWorkoutType
-	if r.MainType == "" {
+	r.SessionTypesEffective = s.SessionTypes
+	if len(r.SessionTypesEffective) == 0 {
+		var main string
 		// Most frequent type over the last 90 days of workouts (ties: more total time). Recent
 		// habits matter more than history, e.g. years of auto-detected walks vs current gym sessions.
 		err := q.QueryRowContext(ctx, `SELECT activity_type FROM workouts
 			WHERE start_ms > (SELECT max(start_ms) FROM workouts) - 90 * 86400000
-			GROUP BY activity_type ORDER BY count(*) DESC, sum(duration_s) DESC, activity_type LIMIT 1`).Scan(&r.MainType)
+			GROUP BY activity_type ORDER BY count(*) DESC, sum(duration_s) DESC, activity_type LIMIT 1`).Scan(&main)
 		if errors.Is(err, sql.ErrNoRows) {
-			r.MainType = ingest.WorkoutFunctionalStrength
+			main = ingest.WorkoutFunctionalStrength
 		} else if err != nil {
 			return nil, err
 		}
+		r.SessionTypesEffective = []string{main}
 	}
-	r.MainTypeName = ingest.WorkoutName(r.MainType)
+	r.SessionTypeNames = make([]string, len(r.SessionTypesEffective))
+	for i, t := range r.SessionTypesEffective {
+		r.SessionTypeNames[i] = ingest.WorkoutName(t)
+	}
+	r.SessionsLabel = SessionsLabel(r.SessionTypeNames)
 	return r, nil
 }
 
@@ -367,4 +393,17 @@ func dataSpan(ctx context.Context, q store.Querier) (first, last days.Day, ok bo
 		return 0, 0, false, fmt.Errorf("data span: %v %v", err1, err2)
 	}
 	return f, l, true, nil
+}
+
+// IsSessionType reports whether workouts of type t count as training sessions.
+func (r *Resolved) IsSessionType(t string) bool {
+	return slices.Contains(r.SessionTypesEffective, t)
+}
+
+// SessionsLabel names the session workout types for labels: one name, "A + B", or "N workout types".
+func SessionsLabel(names []string) string {
+	if len(names) <= 2 {
+		return strings.Join(names, " + ")
+	}
+	return strconv.Itoa(len(names)) + " workout types"
 }

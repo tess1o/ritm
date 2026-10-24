@@ -1207,6 +1207,9 @@ components:
         sessions:
           format: int64
           type: integer
+        sessions_label:
+          description: Which workout types count as sessions, e.g. "Functional Strength Training" or "A + B"
+          type: string
         sessions_target:
           format: double
           type: number
@@ -1230,6 +1233,7 @@ components:
         - hrv_sdnn_ms
         - asleep_min_per_night
         - sessions
+        - sessions_label
         - sessions_target
         - goals
         - insights
@@ -1450,12 +1454,6 @@ components:
             - banister
             - srpe
           type: string
-        main_workout_name:
-          type: string
-        main_workout_type:
-          type: string
-        main_workout_type_effective:
-          type: string
         max_hr:
           format: double
           type:
@@ -1483,6 +1481,21 @@ components:
             - manual
             - 30d_median
             - default
+          type: string
+        session_type_names:
+          items:
+            type: string
+          type: array
+        session_types:
+          items:
+            type: string
+          type: array
+        session_types_effective:
+          items:
+            type: string
+          type: array
+        sessions_label:
+          description: "What sessions count, for labels: the type's name, \"A + B\" or \"N workout types\""
           type: string
         sex:
           type: string
@@ -1536,8 +1549,9 @@ components:
         - resting_hr_source
         - zone_lower_bpm
         - sources
-        - main_workout_type_effective
-        - main_workout_name
+        - session_types_effective
+        - session_type_names
+        - sessions_label
         - goals_source
         - max_hr
         - resting_hr
@@ -1545,7 +1559,7 @@ components:
         - zone_bounds
         - load_model
         - goals
-        - main_workout_type
+        - session_types
         - source_priority
         - waking_start_hour
         - waking_end_hour
@@ -1897,8 +1911,6 @@ components:
             - banister
             - srpe
           type: string
-        main_workout_type:
-          type: string
         max_hr:
           format: double
           type:
@@ -1909,6 +1921,10 @@ components:
           type:
             - number
             - "null"
+        session_types:
+          items:
+            type: string
+          type: array
         source_priority:
           items:
             type: string
@@ -1946,7 +1962,7 @@ components:
         - zone_bounds
         - load_model
         - goals
-        - main_workout_type
+        - session_types
         - source_priority
         - waking_start_hour
         - waking_end_hour
@@ -2282,18 +2298,24 @@ components:
         longest_streak_weeks:
           format: int64
           type: integer
-        main_workout_name:
-          type: string
-        main_workout_type:
-          type: string
         monthly:
           items:
             $ref: "#/components/schemas/MonthVolume"
+          type: array
+        session_type_names:
+          items:
+            type: string
+          type: array
+        session_types:
+          items:
+            type: string
           type: array
         sessions:
           items:
             $ref: "#/components/schemas/SessionHR"
           type: array
+        sessions_label:
+          type: string
         target_sessions:
           format: int64
           type: integer
@@ -2309,8 +2331,9 @@ components:
           type: array
       required:
         - target_sessions
-        - main_workout_type
-        - main_workout_name
+        - session_types
+        - session_type_names
+        - sessions_label
         - weeks
         - current_streak_weeks
         - longest_streak_weeks

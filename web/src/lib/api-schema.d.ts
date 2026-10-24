@@ -1294,6 +1294,8 @@ export interface components {
             scores: components["schemas"]["Scores"];
             /** Format: int64 */
             sessions: number;
+            /** @description Which workout types count as sessions, e.g. "Functional Strength Training" or "A + B" */
+            sessions_label: string;
             /** Format: double */
             sessions_target: number;
             stand_hours_per_day: components["schemas"]["Stat"];
@@ -1401,9 +1403,6 @@ export interface components {
             goals_source: "settings" | "rings";
             /** @enum {string} */
             load_model: "edwards" | "banister" | "srpe";
-            main_workout_name: string;
-            main_workout_type: string;
-            main_workout_type_effective: string;
             /** Format: double */
             max_hr: number | null;
             /** Format: double */
@@ -1416,6 +1415,11 @@ export interface components {
             resting_hr_bpm: number;
             /** @enum {string} */
             resting_hr_source: "manual" | "30d_median" | "default";
+            session_type_names: string[];
+            session_types: string[];
+            session_types_effective: string[];
+            /** @description What sessions count, for labels: the type's name, "A + B" or "N workout types" */
+            sessions_label: string;
             sex: string;
             source_priority: string[];
             sources: components["schemas"]["Source"][];
@@ -1586,11 +1590,11 @@ export interface components {
             goals: components["schemas"]["Goals"];
             /** @enum {string} */
             load_model: "edwards" | "banister" | "srpe";
-            main_workout_type: string;
             /** Format: double */
             max_hr: number | null;
             /** Format: double */
             resting_hr: number | null;
+            session_types: string[];
             source_priority: string[];
             /** Format: double */
             stale_after_hours: number | null;
@@ -1726,10 +1730,11 @@ export interface components {
             current_streak_weeks: number;
             /** Format: int64 */
             longest_streak_weeks: number;
-            main_workout_name: string;
-            main_workout_type: string;
             monthly: components["schemas"]["MonthVolume"][];
+            session_type_names: string[];
+            session_types: string[];
             sessions: components["schemas"]["SessionHR"][];
+            sessions_label: string;
             /** Format: int64 */
             target_sessions: number;
             totals: components["schemas"]["TrainingTotals"];

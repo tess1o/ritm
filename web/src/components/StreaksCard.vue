@@ -74,7 +74,7 @@ const gym = computed(() => {
   } else if (current && current >= longest) note = 'Your longest run yet'
   else if (current) note = `${plural(longest - current + 1, 'more week')} to beat your record of ${longest}`
   else note = `Reach ${t.target_sessions} a week to start one`
-  return { current, longest, weeks, note, target: t.target_sessions, name: t.main_workout_name, record: current > 0 && current >= longest }
+  return { current, longest, weeks, note, target: t.target_sessions, what: t.session_types.length === 1 ? `${t.target_sessions}× ${t.sessions_label} a week` : `${t.target_sessions} sessions a week · ${t.sessions_label}`, record: current > 0 && current >= longest }
 })
 
 // Personal records over the whole range.
@@ -132,7 +132,7 @@ const records = computed(() => {
           <span class="flame gym"><Icon name="dumbbell" :size="22" /></span>
           <div>
             <div class="big tnum">{{ gym.current }}<small>&nbsp;{{ gym.current === 1 ? 'week' : 'weeks' }}</small></div>
-            <div class="what">{{ gym.target }}× {{ gym.name }} a week</div>
+            <div class="what">{{ gym.what }}</div>
           </div>
           <span v-if="gym.record" class="badge">Record</span>
         </div>

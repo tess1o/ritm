@@ -3,6 +3,7 @@ package derive
 import (
 	"context"
 	"database/sql"
+	"slices"
 
 	"ritm/internal/days"
 	"ritm/internal/mathx"
@@ -117,7 +118,7 @@ func (e *Engine) computeLoad(ctx context.Context, tx *sql.Tx, res *Resolved, las
 			first = w.day
 		}
 		load[w.day] += l
-		if w.typ == res.MainType {
+		if res.IsSessionType(w.typ) {
 			sessions[w.day]++
 		}
 	}
@@ -167,8 +168,8 @@ type Week struct {
 	Partial  bool    `json:"partial"` // the week is still in progress
 }
 
-// WeeklySessions returns ISO weeks between from and to with main-type session counts.
-func WeeklySessions(ctx context.Context, q store.Querier, r days.Range, target int, mainType string, today days.Day) ([]Week, error) {
+// WeeklySessions returns ISO weeks between from and to with counts of sessions (workouts of types).
+func WeeklySessions(ctx context.Context, q store.Querier, r days.Range, target int, types []string, today days.Day) ([]Week, error) {
 	start := r.From.ISOWeekStart()
 	rows, err := q.QueryContext(ctx, `SELECT strftime('%Y-%m-%d', (start_ms / 1000) + tz_offset_min * 60, 'unixepoch') AS d,
 		activity_type, duration_s FROM workouts WHERE start_ms >= ? AND start_ms < ?`,
@@ -191,7 +192,7 @@ func WeeklySessions(ctx context.Context, q store.Querier, r days.Range, target i
 			return nil, err
 		}
 		d, err := days.Parse(ds)
-		if err != nil || d < start || d > r.To || typ != mainType {
+		if err != nil || d < start || d > r.To || !slices.Contains(types, typ) {
 			continue
 		}
 		if wk := weeks[d.ISOWeekStart()]; wk != nil {

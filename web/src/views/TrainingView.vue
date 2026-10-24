@@ -31,7 +31,9 @@ const load = useAsync((s) => get<TrainingLoad>(`/training/load${qs(range.value)}
 const workouts = useAsync((s) => get<WorkoutList>(`/workouts${qs({ ...range.value, limit: 500 })}`, s), [range])
 
 const w = computed(() => weekly.data.value)
-setPageMeta(() => ({ subtitle: w.value ? `${w.value.main_workout_name} · target ${w.value.target_sessions} sessions / week` : undefined }))
+setPageMeta(() => ({ subtitle: w.value ? `${w.value.sessions_label} · target ${w.value.target_sessions} sessions / week` : undefined }))
+// What counts as a session: every type's name; the short label hides them once there are 3+.
+const counted = computed(() => w.value?.session_type_names.join(' + ') ?? '')
 const sessionsOption = computed(() => {
   const weeks = w.value?.weeks ?? []
   return {
@@ -156,7 +158,7 @@ const kpis = computed(() => {
     { label: 'Sessions / week', value: num(cur.sessions, 1), delta: change(cur.sessions, prev.sessions), previous: was(prev.sessions, 1),
       series: wk.weeks.map((x) => x.sessions), seriesLabel: 'sessions per week',
       color: color('--c-exercise'), goal: { current: cur.sessions, target: wk.target_sessions },
-      footnote: `${wk.totals.sessions} sessions in this period` },
+      footnote: `${wk.totals.sessions} sessions in this period · ${wk.sessions_label}` },
     { label: 'Training time / week', value: num(cur.hours, 1), unit: 'h', delta: change(cur.hours, prev.hours), previous: was(prev.hours, 1, 'h'),
       series: wk.weeks.map((x) => x.hours), seriesLabel: 'hours per week',
       color: color('--s-orange'), footnote: `${num(wk.totals.hours, 1)} h in this period` },
@@ -214,10 +216,10 @@ const columns = computed<Column<WorkoutSummary>[]>(() => [
         <MetricStrip :items="strip" />
 
         <div class="cols-2">
-          <Card title="Sessions per week" subtitle="Green: target met · orange: missed · grey: week in progress">
-            <Chart :option="sessionsOption" :height="230" label="Gym sessions per ISO week versus target" />
+          <Card title="Sessions per week" :subtitle="`${counted} · green: target met · orange: missed · grey: week in progress`">
+            <Chart :option="sessionsOption" :height="230" :label="`${counted} sessions per ISO week versus target`" />
           </Card>
-          <Card title="Monthly volume">
+          <Card title="Monthly volume" :subtitle="counted">
             <Chart :option="monthlyOption" :height="230" label="Sessions and hours per month" />
           </Card>
           <Card title="Training load" :subtitle="loadSubtitle">
@@ -225,13 +227,13 @@ const columns = computed<Column<WorkoutSummary>[]>(() => [
               <Chart :option="loadOption" :height="250" label="Daily training load with fitness, fatigue and form" />
             </StateBlock>
           </Card>
-          <Card title="Heart-rate zones per week" subtitle="Minutes in each zone during sessions">
+          <Card title="Heart-rate zones per week" :subtitle="`Minutes in each zone during sessions · ${counted}`">
             <Chart :option="zoneOption" :height="250" label="Minutes per heart rate zone per week" />
           </Card>
         </div>
 
-        <Card title="Average session heart rate">
-          <Chart :option="hrOption" :height="220" label="Average heart rate of each gym session"
+        <Card title="Average session heart rate" :subtitle="counted">
+          <Chart :option="hrOption" :height="220" :label="`Average heart rate of each session (${counted})`"
             @click="(p: any) => { const s = w?.sessions.filter((x) => x.avg_hr_bpm !== null)[p?.dataIndex]; if (s) router.push(`/workouts/${s.id}`) }" />
         </Card>
 
