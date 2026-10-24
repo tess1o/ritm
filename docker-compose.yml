@@ -1,0 +1,19 @@
+# Ritm — see https://github.com/tess1o/ritm#quick-start-docker
+services:
+  ritm:
+    image: ghcr.io/tess1o/ritm:latest   # or pin a release, e.g. ghcr.io/tess1o/ritm:0.1.0
+    container_name: ritm                # the README's CLI examples use `docker exec ritm`
+    restart: unless-stopped
+    ports: [ "8080:8080" ]              # "127.0.0.1:8080:8080" behind a reverse proxy on this host
+    environment:
+      RITM_INIT_USER: admin
+      RITM_INIT_PASSWORD: change-me     # pick a long password before the first start
+      RITM_SHORTCUT_URL: https://www.icloud.com/shortcuts/efcd38d390754327925c710a4c2c58e6
+      # RITM_REGISTRATION_ENABLED: "true"
+      # RITM_BASE_URL: https://ritm.example   # only once it is served over HTTPS
+      # RITM_TZ: Europe/Kyiv
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: [ "CMD", "/ritm", "healthcheck" ]   # distroless has no curl; the binary probes /healthz
+      interval: 30s

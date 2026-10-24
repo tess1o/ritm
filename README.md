@@ -13,42 +13,35 @@ and generates plain-language insights. Uptime Kuma can poll it and alert you whe
 
 ## Quick start (Docker)
 
-1. Create a folder for Ritm and its data directory. The image runs as the distroless `nonroot` user (uid 65532), so the
-   data directory must be writable by that user:
+The image is `ghcr.io/tess1o/ritm` (linux/amd64 and linux/arm64), tagged `latest` and with each release version
+(e.g. `0.1.0`).
+
+1. Create a folder with a `data` directory. The container runs as the distroless `nonroot` user (uid 65532), so
+   `data` must belong to that user:
 
    ```sh
    mkdir -p ritm/data && cd ritm
    sudo chown 65532:65532 data
+   chmod 700 data
    ```
 
-2. Create `compose.yaml` in that folder:
+2. Download `docker-compose.yml`:
 
-   ```yaml
-   services:
-     ritm:
-       image: ritm:latest            # build it with `make docker`
-       container_name: ritm          # the CLI examples below use `docker exec ritm`
-       restart: unless-stopped
-       ports: [ "8080:8080" ]
-       environment:
-         RITM_INIT_USER: admin
-         RITM_INIT_PASSWORD: change-me # pick a long password before the first start
-         # RITM_REGISTRATION_ENABLED: "true"
-         # RITM_BASE_URL: https://ritm.example   # only once it is served over HTTPS, see below
-       volumes:
-         - ./data:/data
-       healthcheck:
-         test: [ "CMD", "/ritm", "healthcheck" ]   # distroless has no curl; the binary probes /healthz
-         interval: 30s
+   ```sh
+   curl -fsSLO https://raw.githubusercontent.com/tess1o/ritm/main/docker-compose.yml
    ```
 
-3. Start it:
+3. Edit it and set `RITM_INIT_PASSWORD` to a long password. The `admin` account is created with it on the first start
+   and is never overwritten.
+
+4. Start it:
 
    ```sh
    docker compose up -d
    ```
 
-Then open `http://<host>:8080`, sign in and upload `export.zip`. To get the file on the iPhone, go to Health →
+Then open `http://<host>:8080`, sign in and upload `export.zip`. To update later, run
+`docker compose pull && docker compose up -d`. To get the file on the iPhone, go to Health →
 profile picture → *Export All Health Data* and save it to Files. iOS Safari can upload it from Files.
 
 ### Reverse proxy
