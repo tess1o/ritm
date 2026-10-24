@@ -2,7 +2,7 @@
 # Multi-arch image (linux/amd64, linux/arm64): the UI and Go stages run on the build host and
 # cross-compile, so no emulation is needed. Build with `make docker` or `make docker-multiarch`.
 
-FROM --platform=$BUILDPLATFORM node:24-alpine AS web
+FROM --platform=$BUILDPLATFORM node:25-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
